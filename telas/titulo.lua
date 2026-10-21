@@ -2,13 +2,19 @@
 local C = require "config"
 local Entrada = require "entrada"
 local Cores = require "cores"
+local Carros = require "carros"
 
 local Tela = {}
 Tela.__index = Tela
 
 -- { texto, acao, valor (opcional: texto do valor atual) }
+local function proximo_carro()
+  C.MODELO = Carros[Carros.indice(C.MODELO) % #Carros + 1].id
+end
+
 local OPCOES = {
   { "CORRER (PISTA DE TREINO)", function() Jogo.ir("corrida", { pista = 1, voltas = C.VOLTAS }) end },
+  { "SEU CARRO", proximo_carro, function() return Carros[Carros.indice(C.MODELO)].nome end },
   { "DEMONSTRACAO (COMPUTADOR PILOTA)", function() Jogo.ir("corrida", { pista = 1, voltas = C.VOLTAS, autopiloto = true }) end },
   { "TESTE DE BOTOES", function() Jogo.ir("teste") end },
   { "TESTE DE DESEMPENHO", function() Jogo.ir("desempenho") end },

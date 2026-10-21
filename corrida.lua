@@ -5,16 +5,30 @@ local Carro = require "carro"
 local IA = require "ia"
 local Pista = require "pista"
 local Entrada = require "entrada"
+local Carros = require "carros"
 
 local Corrida = {}
 Corrida.__index = Corrida
 
 local sqrt = math.sqrt
 
-local CORES = { "ver", "azu", "ama", "pra" }
-local NOMES = { "VOCE", "AZUL", "AMARELO", "PRATA" }
+local CORES = { "ver", "azu", "ama", "pra" }   -- o jogador e o vermelho
 
--- opcoes: { pista = n, voltas = n, autopiloto = bool }
+-- os modelos da corrida: o do jogador e, para o computador, outros sorteados (sem repetir)
+local function modelos(do_jogador)
+  local outros = {}
+  for _, m in ipairs(Carros) do
+    if m.id ~= do_jogador then outros[#outros + 1] = m end
+  end
+  for i = #outros, 2, -1 do
+    local j = math.random(i)
+    outros[i], outros[j] = outros[j], outros[i]
+  end
+  table.insert(outros, 1, Carros[Carros.indice(do_jogador)])
+  return outros
+end
+
+-- opcoes: { pista = n, voltas = n, autopiloto = bool, modelo = id do carro do jogador }
 function Corrida.nova(opcoes)
   local r = setmetatable({}, Corrida)
   r.pista = Pista.carregar(opcoes.pista or 1)
@@ -27,14 +41,17 @@ function Corrida.nova(opcoes)
   local p = r.pista
   -- o jogador larga por ultimo (como no Death Rally)
   local vagas = { 4, 1, 2, 3 }
+  local lista = modelos(opcoes.modelo or C.MODELO)
   for i = 1, C.CARROS do
     local g = p.grade[vagas[i]]
+    local m = lista[i]
     local c = Carro.novo({
       x = g[1], y = g[2], ang = g[3],
       M = i == 1 and C.M_JOGADOR or C.M_IA[i - 1],
-      nome = NOMES[i], img = Sprites.img.car[C.MODELO .. "_" .. CORES[i]], humano = i == 1,
-      sombra = Sprites.img.car[C.MODELO .. "_som"],
+      nome = i == 1 and "VOCE" or m.nome, img = Sprites.img.car[m.id .. "_" .. CORES[i]], humano = i == 1,
+      sombra = Sprites.img.car[m.id .. "_som"],
     })
+    c.modelo = m
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada
     c.progresso = c.idx - p.n
