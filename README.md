@@ -8,10 +8,12 @@ Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o co
 
 | Controle | Na corrida | Nos menus |
 |---|---|---|
-| Direcional | Virar (cima acelera, baixo freia) | Escolher |
+| Direcional | Virar, inclusive parado (cima acelera, baixo freia) | Escolher |
 | B | Acelerar | Confirmar |
-| A | Frear / ré | Voltar |
-| X | Turbo (segure) | |
+| X | Frear e ré | |
+| Y | Turbo (segure) | |
+| A | Mina (em breve) | Voltar |
+| R | Metralhadora (em breve) | |
 | START | Pausa | |
 
 ## Código

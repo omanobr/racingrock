@@ -128,7 +128,24 @@ function Corrida:resgatar(c)
   local p = self.pista
   c.x, c.y, c.ang = p.linha.x[c.idx], p.linha.y[c.idx], p.linha.ang[c.idx]
   c.v, c.kx, c.ky, c.deslize, c.no_muro, c.tempo_travado = 0, 0, 0, 0, 0, 0
+  c.segundos_parado, c.marca_x, c.marca_y = 0, c.x, c.y
   c.resgates = (c.resgates or 0) + 1
+end
+
+-- ultima garantia contra carro preso: a cada segundo ve quanto ele andou; parado muito tempo
+-- com o pedal apertado, volta para a pista
+function Corrida:parado(c, dt)
+  c.relogio_parado = (c.relogio_parado or 0) + dt
+  if c.relogio_parado < 1 then return end
+  c.relogio_parado = 0
+  local x, y = c.marca_x or c.x, c.marca_y or c.y
+  c.marca_x, c.marca_y = c.x, c.y
+  if (c.acel or c.freio) and (c.x - x) ^ 2 + (c.y - y) ^ 2 < 36 then
+    c.segundos_parado = (c.segundos_parado or 0) + 1
+    if c.segundos_parado >= C.RESGATE_PARADO then self:resgatar(c) end
+  else
+    c.segundos_parado = 0
+  end
 end
 
 -- indice na linha central, voltas e "progresso" (voltas x pontos + ponto: maior = na frente)
@@ -205,7 +222,10 @@ function Corrida:atualizar(passo)
     c:atualizar(dt, p)
   end
   self:batidas_entre_carros()
-  for _, c in ipairs(self.carros) do self:acompanhar(c) end
+  for _, c in ipairs(self.carros) do
+    self:acompanhar(c)
+    self:parado(c, dt)
+  end
   if self.quadros % 6 == 0 then
     self:classificar()
     self:elastico()

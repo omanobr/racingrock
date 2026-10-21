@@ -13,16 +13,18 @@ E.BOTAO = BOTAO
 E.NO_CONSOLE = NO_CONSOLE
 local B, A, X, Y, R = BOTAO.B, BOTAO.A, BOTAO.X, BOTAO.Y, BOTAO.R
 
--- Na corrida (o L fica de fora: no controle 1 ele faz o console parar uns segundos)
+-- Na corrida (botoes escolhidos pelo Felipe na v0.16): B acelera, X freia e da re (o menos
+-- usado), Y turbo, A solta mina, R metralhadora; o direcional para cima e para baixo tambem
+-- acelera e freia. O L fica de fora: no controle 1 ele faz o console parar uns segundos.
 function E.acelera(p) return ui.btn(B, p) or ui.btn(UP, p) end
-function E.freia(p) return ui.btn(A, p) or ui.btn(DOWN, p) end
+function E.freia(p) return ui.btn(X, p) or ui.btn(DOWN, p) end
 function E.esquerda(p) return ui.btn(LEFT, p) end
 function E.direita(p) return ui.btn(RIGHT, p) end
-function E.turbo(p) return ui.btn(X, p) end
-function E.atira(p) return ui.btn(Y, p) end
-function E.mina(p) return ui.btnp(R, p) end
+function E.turbo(p) return ui.btn(Y, p) end
+function E.atira(p) return ui.btn(R, p) end
+function E.mina(p) return ui.btnp(A, p) end
 
-E.NOME = { confirmar = "B", voltar = "A", acelerar = "B", frear = "A", turbo = "X", atirar = "Y", mina = "R",
+E.NOME = { confirmar = "B", voltar = "A", acelerar = "B", frear = "X", turbo = "Y", atirar = "R", mina = "A",
            pausa = "START" }
 
 -- START: no console e o botao 6 (sem constante). No simulador o 6 e o A: la a pausa fica no

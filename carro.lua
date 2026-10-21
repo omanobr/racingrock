@@ -19,8 +19,6 @@ local PAREDE, FORA = Pista.PAREDE, Pista.FORA
 -- pontos de contato com o muro, como no Death Rally: bico (bit 1), cantos da frente (2 esquerdo,
 -- 4 direito), cantos de tras (8, 16) e o meio das laterais (32, 64). Medidos a partir do
 -- tamanho de cada modelo (dados_carros.lua): para frente (F) e para a direita (R), em px.
-local ESQUERDA = 2 | 8 | 32
-local DIREITA = 4 | 16 | 64
 
 local function sondas(comprimento, largura)
   local f, r = comprimento / 2, largura / 2
@@ -103,15 +101,23 @@ function Carro:atualizar(dt, pista)
   elseif chao == FORA then self.no_muro = self.no_muro + 4 * dt
   else self.no_muro = 0 end
 
-  -- volante: vira menos devagar; de re, ao contrario. Nao gira se o giro encostar no muro.
+  -- volante: gira ate parado (ideia do Felipe na v0.16, para sair de canto de muro), mais
+  -- devagar; de re, ao contrario. Encostado no muro pode girar, desde que o giro nao enfie o
+  -- carro mais (no maximo uma ponta encostada): era isso que prendia o carro nos cantos.
   local vol = self.volante
-  if vol ~= 0 and v ~= 0 then
+  if vol ~= 0 then
     local f = abs(v) / C.GIRO_VEL
-    if f > 1 then f = 1 end
+    if f < C.GIRO_PARADO then f = C.GIRO_PARADO elseif f > 1 then f = 1 end
     local giro = self.giro * f * dt * vol
     if v < 0 then giro = -giro end
     local a = (self.ang + giro) % DOIS_PI
-    if self:bate(self.x, self.y, a, pista) == 0 then self.ang = a end
+    local m, n = self:bate(self.x, self.y, a, pista)
+    if m == 0 then
+      self.ang = a
+    else
+      local _, agora = self:bate(self.x, self.y, self.ang, pista)
+      if n <= agora or n <= 1 then self.ang = a end
+    end
   end
 
   -- deslize
@@ -148,27 +154,81 @@ function Carro:mover(nx, ny, pista)
     self.x, self.y = nx, ny
     return
   end
-  -- ja estava encostado no muro (empurrado por outro carro): so anda se for para sair dele
-  -- (na v0.1 andava livre e o carro atravessava o muro e sumia pelo gramado)
-  local _, antes = self:bate(self.x, self.y, self.ang, pista)
+  -- ja estava encostado no muro: anda se nao encostar mais do que ja estava (sai ou desliza
+  -- ao longo do muro). Na v0.1 andava livre e atravessava o muro; na v0.12-0.16 so andava se
+  -- fosse para sair, e o carro travava nos cantos.
+  local m0, antes = self:bate(self.x, self.y, self.ang, pista)
   if antes > 0 then
-    if n < antes then self.x, self.y = nx, ny else self.travado = true end
+    if n <= antes then
+      self.x, self.y = nx, ny
+      self.v = self.v * C.MURO_ARRASTA ^ (1 / 60)    -- arrastando no muro: perde velocidade
+    else
+      -- empurrando o muro: a velocidade zera (na v0.16 ela subia ate ~100 com o carro parado, e
+      -- a re demorava a fazer efeito)
+      self.travado = true
+      self.v = self.v * 0.5
+    end
+    self:desencostar(m0, antes, pista)
     return
   end
-  -- bateu: fica onde estava
+  -- bateu: fica onde estava, e a reacao depende do angulo com o muro (a direcao do muro vem dos
+  -- pontos de contato que bateram). Quase de frente: volta. De raspao: perde so a parte da
+  -- velocidade que ia contra o muro e gira para ficar paralelo a ele, escorregando (na v0.16,
+  -- nas curvas arredondadas as duas quinas batiam juntas, contava como "de frente" e o carro
+  -- grudava na curva).
   self.batidas = self.batidas + 1
   self.bateu = true
-  self.kx, self.ky, self.deslize = 0, 0, 0
+  self.deslize = 0
   local v = self.v
-  if m & 1 ~= 0 or m & 6 == 6 or (v < 0 and m & 24 ~= 0) then
-    self.v = v * C.MURO_VOLTA                     -- de frente (ou de re, de traseira): volta
-  else
-    local giro = C.MURO_GIRO
-    if m & DIREITA ~= 0 and m & ESQUERDA == 0 then giro = -giro end   -- encostou do lado direito: vira a esquerda
-    local a = (self.ang + giro) % DOIS_PI
-    if self:bate(self.x, self.y, a, pista) == 0 then self.ang = a end
-    self.v = v * C.MURO_PERDA
+  local nx_, ny_ = self:normal_do_muro(m)
+  local s, c = sin(self.ang), cos(self.ang)
+  local sentido = v < 0 and -1 or 1
+  local dx, dy = s * sentido, -c * sentido              -- para onde o carro esta indo
+  local contra = -(dx * nx_ + dy * ny_)                 -- 1 = de frente com o muro, 0 = paralelo
+  self.kx, self.ky = 0, 0
+  if contra > C.MURO_DE_FRENTE then
+    self.v = v * C.MURO_VOLTA                           -- de frente: volta
+    return
   end
+  if contra > 0 then
+    -- gira na direcao do muro (no maximo MURO_GIRO), se o giro nao enfiar o carro no muro
+    local tx, ty = dx + contra * nx_, dy + contra * ny_   -- direcao ao longo do muro
+    local alvo = atan(tx * sentido, -ty * sentido)
+    local dif = (alvo - self.ang + math.pi) % DOIS_PI - math.pi
+    if dif > C.MURO_GIRO then dif = C.MURO_GIRO elseif dif < -C.MURO_GIRO then dif = -C.MURO_GIRO end
+    local a = (self.ang + dif) % DOIS_PI
+    local _, n = self:bate(self.x, self.y, a, pista)
+    if n <= 1 then self.ang = a end
+    self.v = v * (1 - C.MURO_PERDA * contra)
+    -- e um empurraozinho para fora, para nao ficar raspando
+    local q = abs(v) * contra * C.MURO_SEPARA
+    self.kx, self.ky = nx_ * q, ny_ * q
+  end
+end
+
+-- direcao (unitaria) para fora do muro, a partir dos pontos de contato que bateram (bits m)
+function Carro:normal_do_muro(m)
+  local s, c = sin(self.ang), cos(self.ang)
+  local sf, sr = self.sonda_f, self.sonda_r
+  local ex, ey, bit = 0, 0, 1
+  for i = 1, 7 do
+    if m & bit ~= 0 then
+      ex, ey = ex - (s * sf[i] + c * sr[i]), ey - (-c * sf[i] + s * sr[i])
+    end
+    bit = bit << 1
+  end
+  local d = (ex * ex + ey * ey) ^ 0.5
+  if d < 0.01 then return -s, c end
+  return ex / d, ey / d
+end
+
+-- com pontas no muro (bits m), afasta o carro 1 px na direcao contraria a elas, se isso o
+-- desencostar um pouco (assim ele nao fica preso com a quina dentro do muro)
+function Carro:desencostar(m, n, pista)
+  local ex, ey = self:normal_do_muro(m)
+  local x, y = self.x + ex, self.y + ey
+  local _, depois = self:bate(x, y, self.ang, pista)
+  if depois < n then self.x, self.y = x, y end
 end
 
 -- folha (1 ou 2) e tile (com o espelho, +1024) da direcao atual
