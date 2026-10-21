@@ -3,6 +3,7 @@ local C = require "config"
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Carros = require "carros"
+local Pista = require "pista"
 
 local Tela = {}
 Tela.__index = Tela
@@ -12,10 +13,17 @@ local function proximo_carro()
   C.MODELO = Carros[Carros.indice(C.MODELO) % #Carros + 1].id
 end
 
+local function proxima_pista()
+  C.PISTA = C.PISTA % Pista.quantas() + 1
+end
+
 local OPCOES = {
-  { "CORRER (PISTA DE TREINO)", function() Jogo.ir("corrida", { pista = 1, voltas = C.VOLTAS }) end },
+  { "CORRER", function() Jogo.ir("corrida", { pista = C.PISTA, voltas = Pista.LISTA[C.PISTA].voltas }) end },
+  { "PISTA", proxima_pista, function() return Pista.LISTA[C.PISTA].nome end },
   { "SEU CARRO", proximo_carro, function() return Carros[Carros.indice(C.MODELO)].nome end },
-  { "DEMONSTRACAO (COMPUTADOR PILOTA)", function() Jogo.ir("corrida", { pista = 1, voltas = C.VOLTAS, autopiloto = true }) end },
+  { "DEMONSTRACAO (COMPUTADOR PILOTA)", function()
+    Jogo.ir("corrida", { pista = C.PISTA, voltas = Pista.LISTA[C.PISTA].voltas, autopiloto = true })
+  end },
   { "TESTE DE BOTOES", function() Jogo.ir("teste") end },
   { "TESTE DE DESEMPENHO", function() Jogo.ir("desempenho") end },
   { "FPS NO RODAPE", function() Jogo.rodape = not Jogo.rodape end, function() return Jogo.rodape and "SIM" or "NAO" end },

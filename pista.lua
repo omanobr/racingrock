@@ -10,17 +10,19 @@ local byte = string.byte
 -- fora (vermelho: alem do muro; carro que chegar la volta para a pista)
 Pista.ASFALTO, Pista.TERRA, Pista.PAREDE, Pista.CHEGADA, Pista.FORA = 48, 49, 50, 51, 52
 
-local LISTA = { "p0" }   -- ids das pistas, na ordem do menu
+-- as pistas, na ordem do menu: { id, nome } (ferramentas/preparar_pista.py)
+Pista.LISTA = require "pistas.lista"
 
-function Pista.quantas() return #LISTA end
+function Pista.quantas() return #Pista.LISTA end
 
 function Pista.carregar(n)
-  local id = LISTA[n] or LISTA[1]
+  local id = (Pista.LISTA[n] or Pista.LISTA[1]).id
   local dados = require("pistas." .. id)
   local p = setmetatable(dados, Pista)
   p.id = id
   p.imagens = {}
-  for i, nome in ipairs(dados.folhas) do p.imagens[i] = Sprites.img[id][nome] end
+  local pasta = Sprites.img[dados.pasta or id]   -- duas pistas podem usar as mesmas folhas
+  for i, nome in ipairs(dados.folhas) do p.imagens[i] = pasta[nome] end
   p.n = #dados.linha.x
   p.passo_terreno = dados.terreno_px
   return p
