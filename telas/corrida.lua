@@ -17,7 +17,6 @@ function Tela.nova(opcoes)
   local t = setmetatable({}, Tela)
   t.corrida = Corrida.nova(opcoes or {})
   t.camera = Camera.nova(t.corrida.pista, t.corrida.jogador)
-  t.sombra = Sprites.img.car.t_som
   t.quadros = {}
   t.pausa = false
   return t
@@ -40,18 +39,17 @@ function Tela:desenhar()
   local x0, y0 = cam.x0, cam.y0
   Fundo.desenhar(r.pista, x0, y0)
 
-  -- sombras (todas da mesma folha, em seguida: uma carga so) e depois os carros. Carro (com a
+  -- sombras (do mesmo modelo = mesma folha, em seguida: uma carga so) e depois os carros. Carro (com a
   -- sombra, 3 px para a direita) que nao cabe inteiro na largura da tela nao e desenhado: o
   -- console desenha errado o que fica cortado pela borda; a faixa preta esconde o sumico.
   local tile, carros, quadros = ui.tile, r.carros, self.quadros
-  local sombra = self.sombra
   for i = 1, #carros do
     local c = carros[i]
     local sx, sy = (c.x - x0) // 1 - 16, (c.y - y0) // 1 - 16
     if sx >= 0 and sx <= TELA_W - 35 and sy > -32 and sy < 270 then
       local q = c:quadro()
       quadros[i] = q
-      tile(sombra, q, sx + 3, sy + 3)
+      tile(c.sombra, q, sx + 3, sy + 3)
     else
       quadros[i] = false
     end

@@ -33,7 +33,7 @@ function Carro.novo(def)
   c.vmax = (C.ACEL * c.M) / (C.ARRASTO + C.ARRASTO_ACEL)
   c.acel, c.freio, c.turbo, c.volante = false, false, false, 0
   c.turbo_carga = 1
-  c.nome, c.img, c.humano = def.nome, def.img, def.humano
+  c.nome, c.img, c.sombra, c.humano = def.nome, def.img, def.sombra, def.humano
   c.batidas = 0
   c.no_muro = 0        -- segundos com o meio do carro no muro (corrida.lua resgata)
   c.tempo_travado = 0  -- segundos encostado no muro sem conseguir sair

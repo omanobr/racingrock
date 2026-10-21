@@ -2,10 +2,11 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.13"
+C.VERSAO = "0.14"
 
 C.VOLTAS = 3
 C.CARROS = 4
+C.MODELO = "c1"         -- carro de todos nesta versao (img/car/<modelo>_<cor>, ferramentas/preparar_carros.py)
 
 -- Carro. M e a "potencia" do Death Rally (2.55 no carro mais fraco, 4.3 no mais forte).
 -- Com o acelerador apertado o carro chega a ~54*M px/s; com turbo, ~88*M px/s.

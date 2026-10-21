@@ -32,7 +32,8 @@ function Corrida.nova(opcoes)
     local c = Carro.novo({
       x = g[1], y = g[2], ang = g[3],
       M = i == 1 and C.M_JOGADOR or C.M_IA[i - 1],
-      nome = NOMES[i], img = Sprites.img.car["t_" .. CORES[i]], humano = i == 1,
+      nome = NOMES[i], img = Sprites.img.car[C.MODELO .. "_" .. CORES[i]], humano = i == 1,
+      sombra = Sprites.img.car[C.MODELO .. "_som"],
     })
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada
