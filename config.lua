@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.17"
+C.VERSAO = "0.18"
 
 C.VOLTAS = 3
 C.CARROS = 4
@@ -46,6 +46,48 @@ C.EMPURRAO_FIM = 9.78   -- o empurrao some (1.15 por quadro)
 C.RESGATE = 0.4         -- segundos com o meio do carro no muro (0,1 s fora da pista): volta para a pista
 C.RESGATE_TRAVADO = 1.5 -- segundos encostado no muro sem conseguir sair: idem
 C.RESGATE_PARADO = 4    -- segundos sem sair do lugar (menos de 6 px por segundo) com o pedal apertado: idem
+
+-- Combate, com as formulas do Death Rally (vida cheia = 1024 x 100; tudo depende da blindagem
+-- de quem leva, de 0 a 1024; cada % de vida = 1024):
+--   metralhadora: (1024 - blindagem) x fator da arma de quem atira, por quadro a 70 por segundo
+--   mina: 20 x (1024 - blindagem); batida: (1024 - blindagem) x (velocidade em px/quadro)^2, ate 10000
+--   blindagem = base do carro (120 a 350) + nivel comprado (360 a 600) + 100 do jogador, ate 900
+C.VIDA = 100
+C.ARMA_ALCANCE = 170    -- px (130 no Death Rally, x ESCALA)
+C.ARMA_FATOR = { 0.2, 0.95 }       -- arma 1 a 5 da ficha (carros.lua): 0,2 + 0,15 x tipo (0 a 5)
+C.BLINDAGEM_BASE = { 120, 350 }    -- blindagem 1 a 5 da ficha
+C.BLINDAGEM_NIVEL = 360            -- o 1o nivel (a loja vai vender os outros, ate 600)
+C.BLINDAGEM_JOGADOR = 100
+C.BLINDAGEM_MAX = 900
+C.QUADROS_DR = 70       -- o Death Rally roda a 70 quadros por segundo
+C.MINA_FORCA = 20
+C.BATIDA_MAX = 10000
+C.BATIDA_MIN = 40       -- batida mais devagar que isso (px/s) nao tira vida
+C.MUNICAO = 6           -- segundos de tiro no comeco da corrida (5,6 s no Death Rally)
+C.MUNICAO_ITEM = 4      -- segundos a mais por caixa de municao
+C.MINAS = 3             -- minas por corrida
+C.MINA_FREIA = -0.5     -- velocidade x isto (o Death Rally usa -0.7)
+C.MINA_GIRO = math.rad(25)   -- gira ate isto para um lado
+C.MINA_ARMA = 1.0       -- segundos ate a mina valer para quem soltou
+
+-- Pontos e dinheiro (ideia do Felipe; so o jogador ganha o bonus de sobrevivente)
+C.PONTOS_POSICAO = { 5, 3, 1, 0 }
+C.PONTOS_ABATE = 2
+C.PREMIO_POSICAO = { 750, 375, 187, 0 }   -- o Death Rally paga isso nas corridas faceis
+C.PREMIO_ABATE = 300
+C.PREMIO_SOBREVIVENTE = 1000
+C.ABATE_ATE = 4         -- segundos: quem acertou o carro por ultimo nesse tempo leva o abate
+C.ITENS_MAX = 4         -- itens na pista ao mesmo tempo
+C.ITEM_INTERVALO = 3    -- segundos entre um item novo e outro
+C.CONSERTO = 30         -- % de vida da chave
+C.DINHEIRO_ITEM = 50
+C.FUMACA_VIDA = 40      -- abaixo disso o carro solta fumaca
+C.EFEITO_DURA = { explosao = 0.4, explosao_grande = 0.9, faisca = 0.15, fumaca = 0.8 }
+C.IA_MINA_ESPERA = 5    -- segundos entre uma mina e outra do computador
+C.IA_TIRO_INICIO = 4    -- o computador nao atira nos primeiros segundos (todos colados na largada)
+C.IA_RAJADA = { 0.5, 1.0 }   -- o computador atira em rajadas de 0,5 a 1 s...
+C.IA_PAUSA = { 0.6, 1.6 }    -- ...com pausas de 0,6 a 1,6 s
+C.IA_ERRO_MIRA = math.rad(7) -- e mira com um erro sorteado a cada rajada (a 100 px: ate 12 px)
 
 -- Carros do computador
 C.IA_OLHAR = 3          -- pontos da linha central a frente (16 px cada), + 1 a cada IA_OLHAR_VEL px/s

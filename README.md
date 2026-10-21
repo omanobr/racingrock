@@ -2,7 +2,7 @@
 
 Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o console **Lupi**.
 
-> Versão 0.1: protótipo. Pista de treino e carros provisórios (a arte de verdade vem depois), física no jeito do Death Rally (derrapagem, terra que segura o carro, muros), 3 pilotos do computador, voltas e classificação. O menu também tem um teste de botões e um teste de desempenho para rodar no aparelho.
+> Versão 0.18: 8 carros (uno, ka, fusca, corsa, focus, monza, opala, puma), pista de treino, física no jeito do Death Rally (derrapagem, terra que segura o carro, muro em que o carro desliza), 3 pilotos do computador e combate: metralhadora, minas, vida, carros destruídos e itens na pista. Dinheiro pela colocação, por abate e por ser o último sobrevivente.
 
 ## Como jogar
 
@@ -12,8 +12,8 @@ Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o co
 | B | Acelerar | Confirmar |
 | X | Frear e ré | |
 | Y | Turbo (segure) | |
-| A | Mina (em breve) | Voltar |
-| R | Metralhadora (em breve) | |
+| A | Solta mina | Voltar |
+| R | Metralhadora (segure) | |
 | START | Pausa | |
 
 ## Código

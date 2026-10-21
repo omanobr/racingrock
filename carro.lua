@@ -186,6 +186,7 @@ function Carro:mover(nx, ny, pista)
   local dx, dy = s * sentido, -c * sentido              -- para onde o carro esta indo
   local contra = -(dx * nx_ + dy * ny_)                 -- 1 = de frente com o muro, 0 = paralelo
   self.kx, self.ky = 0, 0
+  if contra > 0 then self.impacto = abs(v) * contra end   -- combate.lua tira vida
   if contra > C.MURO_DE_FRENTE then
     self.v = v * C.MURO_VOLTA                           -- de frente: volta
     return

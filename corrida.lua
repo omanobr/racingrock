@@ -6,6 +6,7 @@ local IA = require "ia"
 local Pista = require "pista"
 local Entrada = require "entrada"
 local Carros = require "carros"
+local Combate = require "combate"
 
 local Corrida = {}
 Corrida.__index = Corrida
@@ -61,6 +62,7 @@ function Corrida.nova(opcoes)
     r.carros[i] = c
   end
   r.jogador = r.carros[1]
+  r.combate = Combate.novo(r)
   r.classificacao = {}
   for i = 1, #r.carros do r.classificacao[i] = r.carros[i] end
   r:classificar()
@@ -73,6 +75,8 @@ local function comandos_do_jogador(c)
   c.freio = Entrada.freia(0)
   c.turbo = Entrada.turbo(0)
   c.volante = (Entrada.direita(0) and 1 or 0) - (Entrada.esquerda(0) and 1 or 0)
+  c.atirando = Entrada.atira(0)
+  c.soltar_mina = Entrada.mina(0)
 end
 
 -- batidas entre carros: cada carro e 2 circulos (frente e tras, da largura do carro); no par de
@@ -112,7 +116,11 @@ function Corrida:batidas_entre_carros()
         if fundo > 0 then
           local aproxima = (b.vx + b.kx - a.vx - a.kx) * nx + (b.vy + b.ky - a.vy - a.ky) * ny
           local imp = 40 * fundo       -- afasta
-          if aproxima < 0 then imp = imp - aproxima * C.EMPURRAO end
+          if aproxima < 0 then
+            imp = imp - aproxima * C.EMPURRAO
+            a.impacto_carro, b.impacto_carro = -aproxima, -aproxima   -- combate.lua tira vida
+            a.batido_por, b.batido_por = b, a
+          end
           a.kx, a.ky = a.kx - nx * imp, a.ky - ny * imp
           b.kx, b.ky = b.kx + nx * imp, b.ky + ny * imp
           a.v, b.v = a.v * 0.97, b.v * 0.97
@@ -180,9 +188,13 @@ end
 
 function Corrida:classificar()
   local lista = self.classificacao
+  -- quem chegou (pela ordem de chegada), depois quem esta correndo (pelo progresso) e por ultimo
+  -- os destruidos (quem caiu depois fica na frente)
   table.sort(lista, function(a, b)
     if a.chegou and b.chegou then return a.chegou < b.chegou end
     if a.chegou or b.chegou then return a.chegou ~= nil end
+    if a.destruido and b.destruido then return a.destruido > b.destruido end
+    if a.destruido or b.destruido then return b.destruido ~= nil end
     return a.progresso > b.progresso
   end)
   for i = 1, #lista do lista[i].posicao = i end
@@ -215,25 +227,75 @@ function Corrida:atualizar(passo)
   local p = self.pista
   for _, c in ipairs(self.carros) do
     c.bateu, c.bateu_carro = false, false
-    if c.ia then IA.pilotar(c, self, dt) else comandos_do_jogador(c) end
-    if c.chegou and c.humano and not c.ia then         -- depois da chegada, o computador leva
-      IA.preparar(c); c.ia = true
+    if c.destruido then
+      c.acel, c.freio, c.turbo, c.volante, c.atirando = false, false, false, 0, false
+    else
+      if c.chegou and c.humano and not c.ia then       -- depois da chegada, o computador leva
+        IA.preparar(c); c.ia = true
+      end
+      if c.ia then
+        IA.pilotar(c, self, dt)
+        IA.combate(c, self, dt)
+      else
+        comandos_do_jogador(c)
+      end
     end
     c:atualizar(dt, p)
   end
   self:batidas_entre_carros()
+  self.combate:atualizar(dt)
   for _, c in ipairs(self.carros) do
-    self:acompanhar(c)
-    self:parado(c, dt)
+    if not c.destruido then
+      self:acompanhar(c)
+      self:parado(c, dt)
+    end
   end
   if self.quadros % 6 == 0 then
     self:classificar()
     self:elastico()
   end
-  if self.estado == "correndo" and self.jogador.chegou then
-    self.estado = "fim"
-    self.fim_em = self.tempo
+  if self.estado == "correndo" then
+    local j = self.jogador
+    -- so o jogador sobrou: vence na hora (e leva o bonus de sobrevivente, em premiar)
+    if not j.destruido and not j.chegou then
+      local vivos = 0
+      for _, c in ipairs(self.carros) do
+        if not c.destruido and not c.chegou then vivos = vivos + 1 end
+      end
+      if vivos == 1 and self.combate.destruidos == #self.carros - 1 then
+        j.sobrevivente = true
+        j.chegou = self.tempo
+        self.chegada[#self.chegada + 1] = j
+      end
+    end
+    if j.chegou or j.destruido then
+      self.estado = "fim"
+      self.fim_em = self.tempo
+      self:classificar()
+    end
   end
+end
+
+-- pontos (internos: o objetivo do computador e ganhar a corrida, atirando quando da; vao servir
+-- para o ranking do campeonato) e o dinheiro do jogador, item por item (destruido nao leva o
+-- premio da colocacao, como no Death Rally)
+function Corrida:premiar()
+  self:classificar()
+  for i, c in ipairs(self.classificacao) do
+    c.pontos = (c.destruido and 0 or (C.PONTOS_POSICAO[i] or 0)) + c.abates * C.PONTOS_ABATE
+  end
+  local j = self.jogador
+  local linhas = {}
+  local function linha(texto, valor)
+    if valor > 0 then linhas[#linhas + 1] = { texto, valor } end
+  end
+  if not j.destruido then linha(string.format("PREMIO DO %do LUGAR", j.posicao), C.PREMIO_POSICAO[j.posicao] or 0) end
+  linha(string.format("ABATES (%d)", j.abates), j.abates * C.PREMIO_ABATE)
+  if j.sobrevivente then linha("ULTIMO SOBREVIVENTE", C.PREMIO_SOBREVIVENTE) end
+  linha("DINHEIRO PEGO NA PISTA", j.dinheiro)
+  local total = 0
+  for _, l in ipairs(linhas) do total = total + l[2] end
+  return linhas, total
 end
 
 return Corrida

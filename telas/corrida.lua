@@ -39,6 +39,7 @@ function Tela:desenhar()
   local r, cam = self.corrida, self.camera
   local x0, y0 = cam.x0, cam.y0
   Fundo.desenhar(r.pista, x0, y0)
+  r.combate:desenhar_chao(x0, y0, r.quadros)
 
   -- sombras e depois os carros (cada modelo tem 2 folhas: as direcoes estao divididas entre elas).
   -- Carro (com a sombra, 3 px para a direita) que nao cabe inteiro na largura da tela nao e
@@ -64,6 +65,8 @@ function Tela:desenhar()
       tile(f == 1 and c.img or c.img2, tiles[i], (c.x - x0) // 1 - meio, (c.y - y0) // 1 - meio)
     end
   end
+
+  r.combate:desenhar_cima(x0, y0, r.quadros, Cores.amarelo)
 
   -- faixas pretas nos lados: cobrem o vao das colunas de tiles que nao cabem inteiras
   local m = Fundo.MARGEM

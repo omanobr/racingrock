@@ -79,4 +79,38 @@ function IA.pilotar(c, corrida, dt)
   end
 end
 
+-- combate do computador (como no Death Rally): atira quando ha um carro na frente, no alcance da
+-- metralhadora, e solta mina quando ha um carro colado atras
+function IA.combate(c, corrida, dt)
+  local fx, fy = sin(c.ang), -cos(c.ang)
+  local atira, mina = false, false
+  for _, o in ipairs(corrida.carros) do
+    if o ~= c and not o.destruido then
+      local dx, dy = o.x - c.x, o.y - c.y
+      local adiante = dx * fx + dy * fy
+      local lado = dx * -fy + dy * fx
+      if adiante > 0 and adiante < C.ARMA_ALCANCE and lado < o.largura and lado > -o.largura then atira = true end
+      if adiante < -c.comprimento and adiante > -c.comprimento - 50 and lado < 20 and lado > -20 then mina = true end
+    end
+  end
+  -- rajadas com pausas (segurando o gatilho direto, todo mundo morria em segundos)
+  c.atirando = false
+  c.rajada, c.pausa = (c.rajada or 0) - dt, (c.pausa or 0) - dt
+  if atira and c.municao > 0 and corrida.tempo > C.IA_TIRO_INICIO then
+    if c.rajada > 0 then
+      c.atirando = true
+    elseif c.pausa <= 0 then
+      c.rajada = C.IA_RAJADA[1] + random() * (C.IA_RAJADA[2] - C.IA_RAJADA[1])
+      c.mira_erro = (random() - 0.5) * 2 * C.IA_ERRO_MIRA   -- nao acerta sempre
+      c.pausa = c.rajada + C.IA_PAUSA[1] + random() * (C.IA_PAUSA[2] - C.IA_PAUSA[1])
+      c.atirando = true
+    end
+  end
+  c.espera_mina = (c.espera_mina or C.IA_MINA_ESPERA) - dt
+  if mina and c.minas > 0 and c.espera_mina <= 0 then
+    c.soltar_mina = true
+    c.espera_mina = C.IA_MINA_ESPERA
+  end
+end
+
 return IA
