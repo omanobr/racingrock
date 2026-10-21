@@ -130,8 +130,8 @@ function Corrida:classificar()
   for i = 1, #lista do lista[i].posicao = i end
 end
 
--- elastico (como no Death Rally): o computador acelera um pouco quando esta atras do jogador
--- e alivia quando esta muito na frente
+-- elastico (como no Death Rally): o motor do computador fica mais forte quando ele esta atras do
+-- jogador e mais fraco quando esta muito na frente (carro.lua multiplica a potencia M)
 function Corrida:elastico()
   local E, j = C.IA_ELASTICO, self.jogador
   for i = 2, #self.carros do

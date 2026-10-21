@@ -54,7 +54,8 @@ function Carro:bate(x, y, a, pista)
 end
 
 function Carro:atualizar(dt, pista)
-  local M, v = self.M, self.v
+  -- elastico (corrida.lua, so no computador): como no Death Rally, multiplica a potencia
+  local M, v = self.M * (self.elastico or 1), self.v
   local k = C.ARRASTO
 
   -- turbo (o tanque esvazia em ~3,7 s e enche devagar), acelerador, freio
