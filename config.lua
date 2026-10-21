@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.1"
+C.VERSAO = "0.11"
 
 -- Fundo da pista: "tiles" (ui.tile, um por tile, agrupados por folha), "mapa" (ui.map em
 -- blocos fixos de 16x16 tiles) ou "visao" (ui.map numa tabela do tamanho da tela, refeita

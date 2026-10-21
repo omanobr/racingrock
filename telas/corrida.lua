@@ -61,6 +61,13 @@ function Tela:desenhar()
     end
   end
 
+  -- faixas pretas nos lados (opcao do menu): cobrem os tiles cortados nas bordas, que na
+  -- v0.1 apareceram trocados no aparelho
+  if Jogo.bordas then
+    ui.rectfill(0, 0, 15, 269, Cores.preto)
+    ui.rectfill(464, 0, 479, 269, Cores.preto)
+  end
+
   Hud.desenhar(r)
   if self.pausa then
     ui.rectfill(170, 110, 309, 149, Cores.preto)

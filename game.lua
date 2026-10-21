@@ -20,6 +20,7 @@ local TELAS = {
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
   teste = require "telas.teste",
+  bordas = require "telas.bordas",
   desempenho = require "telas.desempenho",
 }
 
