@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.18"
+C.VERSAO = "0.19"
 
 C.VOLTAS = 3
 C.CARROS = 4

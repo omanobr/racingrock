@@ -2,7 +2,7 @@
 
 Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o console **Lupi**.
 
-> Versão 0.18: 8 carros (uno, ka, fusca, corsa, focus, monza, opala, puma), pista de treino, física no jeito do Death Rally (derrapagem, terra que segura o carro, muro em que o carro desliza), 3 pilotos do computador e combate: metralhadora, minas, vida, carros destruídos e itens na pista. Dinheiro pela colocação, por abate e por ser o último sobrevivente.
+> Versão 0.19: 9 carros (fusca, uno, ka, saveiro, corsa, focus, monza, opala, puma), pista de treino, física no jeito do Death Rally (derrapagem, terra que segura o carro, muro em que o carro desliza), 3 pilotos do computador e combate: metralhadora, minas, vida, carros destruídos e itens na pista. Dinheiro pela colocação, por abate e por ser o último sobrevivente.
 
 ## Como jogar
 
