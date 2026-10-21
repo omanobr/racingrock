@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.24"
+C.VERSAO = "0.25"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -74,14 +74,30 @@ C.MINA_ARMA = 1.0       -- segundos ate a mina valer para quem soltou
 -- Pontos e dinheiro (ideia do Felipe; so o jogador ganha o bonus de sobrevivente)
 C.PONTOS_POSICAO = { 5, 3, 1, 0 }
 C.PONTOS_ABATE = 2
-C.PREMIO_POSICAO = { 750, 375, 187, 0 }   -- o Death Rally paga isso nas corridas faceis
-C.PREMIO_ABATE = 300
-C.PREMIO_SOBREVIVENTE = 1000
+-- dinheiro do jogador por corrida, pela dificuldade (o Death Rally paga ~750/375/187 nas faceis;
+-- aqui tudo multiplo de 100: o password guarda o dinheiro em centenas). A corrida rapida paga
+-- como a facil.
+C.PREMIOS = {
+  facil = { posicao = { 800, 400, 200, 0 }, abate = 300, sobrevivente = 1000 },
+  medio = { posicao = { 1600, 800, 400, 0 }, abate = 500, sobrevivente = 2000 },
+  dificil = { posicao = { 3200, 1600, 800, 0 }, abate = 800, sobrevivente = 3000 },
+  final = { posicao = { 10000, 0, 0, 0 }, abate = 1000, sobrevivente = 5000 },
+}
+-- modo historia (campeonato.lua): pontos do ranking por colocacao (+1 por abate), potencia dos
+-- rivais (x a ficha do carro deles), conserto por % de estrago (+1 a cada carro melhor) e o
+-- efeito das melhorias da oficina (por nivel, ate 3)
+C.PONTOS_RANKING = { facil = { 3, 2, 1, 0 }, medio = { 5, 3, 2, 0 }, dificil = { 8, 5, 3, 1 }, final = { 0, 0, 0, 0 } }
+C.PONTOS_RANKING_ABATE = 1
+C.CAMPEONATO_FATOR = { facil = 0.86, medio = 0.94, dificil = 1.0, final = 1.03 }
+C.CONSERTO_POR_PCT = 6
+C.MELHORIA_MOTOR = 0.04        -- potencia +4% por nivel
+C.MELHORIA_PNEU = 0.035        -- escorregamento -0,035 por nivel
+C.MELHORIA_BLINDAGEM = 80      -- blindagem +80 por nivel (360 -> 600, como na loja do Death Rally)
 C.ABATE_ATE = 4         -- segundos: quem acertou o carro por ultimo nesse tempo leva o abate
 C.ITENS_MAX = 4         -- itens na pista ao mesmo tempo
 C.ITEM_INTERVALO = 3    -- segundos entre um item novo e outro
 C.CONSERTO = 15         -- % de vida da chave (30 na v0.21: o Felipe achou que curava demais)
-C.DINHEIRO_ITEM = 50
+C.DINHEIRO_ITEM = 100
 C.FUMACA_VIDA = 40      -- abaixo disso o carro solta fumaca
 C.EFEITO_DURA = { explosao = 0.4, explosao_grande = 0.9, faisca = 0.15, fumaca = 0.8 }
 C.IA_MINA_ESPERA = 5    -- segundos entre uma mina e outra do computador

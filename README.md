@@ -2,7 +2,7 @@
 
 Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o console **Lupi**.
 
-> Versão 0.24: 6 pistas (treino, gramado, porto, deserto, neve e a volta de dentro da neve; escolha em PISTA no menu), 9 carros (fusca, uno, ka, saveiro, corsa, focus, monza, opala, puma), física no jeito do Death Rally (derrapagem, terra que segura o carro, muro em que o carro desliza), 3 pilotos do computador e combate: metralhadora, minas, vida, carros destruídos e itens na pista. Dinheiro pela colocação, por abate e por ser o último sobrevivente.
+> Versão 0.25: **modo história** (campeonato com ranking de 20 pilotos, oficina, concessionária, desafio final e password de 8 letras para continuar depois), corrida rápida, 6 pistas, 9 carros com personalidade (velocidade, aceleração, aderência e tração), física no jeito do Death Rally e combate: metralhadora, minas, vida, carros destruídos e itens na pista.
 
 ## Como jogar
 
@@ -15,6 +15,12 @@ Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o co
 | A | Solta mina | Voltar |
 | R | Metralhadora (segure) | |
 | START | Pausa | |
+
+## Modo história
+
+Você começa no último lugar de um ranking de 20 pilotos, com um fusca velho e $500. A cada rodada escolhe uma corrida (fácil, média ou difícil), ganha dinheiro e pontos, paga o conserto, compra melhorias (motor, pneus, blindagem) e carros melhores. No 1º lugar do ranking abre o desafio final contra O ADVERSÁRIO.
+
+O console não guarda o jogo: a garagem mostra um **password de 8 letras** com todo o progresso. Para continuar outro dia: MODO HISTÓRIA → PASSWORD.
 
 ## Código
 

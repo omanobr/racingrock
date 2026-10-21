@@ -25,6 +25,7 @@ function Combate.novo(corrida)
     c.dano_por, c.abates, c.mira_erro = {}, 0, 0
     -- blindagem e arma pela ficha do modelo (carros.lua), como no Death Rally
     local b = escala(c.modelo.blindagem, C.BLINDAGEM_BASE) + C.BLINDAGEM_NIVEL + (c.humano and C.BLINDAGEM_JOGADOR or 0)
+      + (c.nivel_blindagem or 0) * C.MELHORIA_BLINDAGEM      -- oficina do modo historia
     c.blindagem = b < C.BLINDAGEM_MAX and b or C.BLINDAGEM_MAX
     c.fator_arma = escala(c.modelo.arma, C.ARMA_FATOR)
   end

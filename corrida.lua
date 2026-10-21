@@ -29,11 +29,15 @@ local function modelos(do_jogador)
   return outros
 end
 
--- opcoes: { pista = n, voltas = n, autopiloto = bool, modelo = id do carro do jogador }
+-- opcoes: { pista = n, voltas = n, autopiloto = bool, modelo = id do carro do jogador,
+--   e no modo historia (campeonato.lua): rivais = { { nome, modelo, fator, blindagem }, ... },
+--   melhorias = { motor, pneus, blindagem } do jogador, dificuldade = "facil"..., campeonato }
 function Corrida.nova(opcoes)
   local r = setmetatable({}, Corrida)
   r.pista = Pista.carregar(opcoes.pista or 1)
   r.voltas = opcoes.voltas or C.VOLTAS
+  r.dificuldade = opcoes.dificuldade or "facil"
+  r.campeonato = opcoes.campeonato
   r.estado = "contagem"
   r.tempo = 0          -- segundos desde a largada
   r.contagem = 3
@@ -43,19 +47,30 @@ function Corrida.nova(opcoes)
   -- o jogador larga por ultimo (como no Death Rally)
   local vagas = { 4, 1, 2, 3 }
   local lista = modelos(opcoes.modelo or C.MODELO)
+  local rivais = opcoes.rivais
+  if rivais then        -- modo historia: os rivais e os carros deles vem do ranking
+    for i = 1, 3 do lista[i + 1] = Carros[Carros.indice(rivais[i].modelo)] end
+  end
+  local mel = opcoes.melhorias or {}
   for i = 1, C.CARROS do
     local g = p.grade[vagas[i]]
     local m = lista[i]
+    local rival = rivais and rivais[i - 1]
+    local fator = i == 1 and 1 + C.MELHORIA_MOTOR * (mel.motor or 0) or C.IA_FATOR_M[i - 1]
+    if rival then fator = C.IA_FATOR_M[i - 1] * rival.fator end
+    local ader = Carros.escala(m.aderencia, C.FICHA_ADERENCIA)
+    if i == 1 then ader = math.max(0.1, ader - C.MELHORIA_PNEU * (mel.pneus or 0)) end
     local c = Carro.novo({
       x = g[1], y = g[2], ang = g[3],
-      M = Carros.escala(m.velocidade, C.FICHA_M) * (i == 1 and 1 or C.IA_FATOR_M[i - 1]),
+      M = Carros.escala(m.velocidade, C.FICHA_M) * fator,
       arranque = Carros.escala(m.aceleracao, C.FICHA_ARRANQUE),
-      aderencia = Carros.escala(m.aderencia, C.FICHA_ADERENCIA),
+      aderencia = ader,
       tracao = m.tracao,
-      nome = i == 1 and "VOCE" or m.nome, humano = i == 1, modelo = m.id,
+      nome = i == 1 and "VOCE" or (rival and rival.nome or m.nome), humano = i == 1, modelo = m.id,
       img = Sprites.img.car[m.id .. "_" .. CORES[i]], img2 = Sprites.img.car[m.id .. "_" .. CORES[i] .. "2"],
     })
     c.modelo = m
+    c.nivel_blindagem = i == 1 and (mel.blindagem or 0) or (rival and rival.blindagem or 0)
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada
     c.progresso = c.idx - p.n
@@ -169,11 +184,17 @@ function Corrida:acompanhar(c)
     if c.meio then
       c.volta = c.volta + 1
       c.meio = false
-      if c.volta > 1 then
-        local t = self.tempo - (c.inicio_volta or 0)
-        if not c.melhor_volta or t < c.melhor_volta then c.melhor_volta = t end
+      if c.voltou_na_linha then
+        -- tinha cruzado a linha de re: so voltou para a mesma volta (na v0.24 contava uma
+        -- "melhor volta" de 0,2 s)
+        c.voltou_na_linha = false
+      else
+        if c.volta > 1 then
+          local t = self.tempo - (c.inicio_volta or 0)
+          if not c.melhor_volta or t < c.melhor_volta then c.melhor_volta = t end
+        end
+        c.inicio_volta = self.tempo
       end
-      c.inicio_volta = self.tempo
       if c.volta > self.voltas and not c.chegou then
         c.chegou = self.tempo
         self.chegada[#self.chegada + 1] = c
@@ -182,6 +203,7 @@ function Corrida:acompanhar(c)
   elseif agora > antes + n // 2 then            -- voltou para tras da linha
     c.volta = c.volta - 1
     c.meio = true
+    c.voltou_na_linha = true
   end
   if agora > n // 3 and agora < 2 * n // 3 then c.meio = true end
   c.idx = agora
@@ -287,13 +309,14 @@ function Corrida:premiar()
     c.pontos = (c.destruido and 0 or (C.PONTOS_POSICAO[i] or 0)) + c.abates * C.PONTOS_ABATE
   end
   local j = self.jogador
+  local P = C.PREMIOS[self.dificuldade] or C.PREMIOS.facil
   local linhas = {}
   local function linha(texto, valor)
     if valor > 0 then linhas[#linhas + 1] = { texto, valor } end
   end
-  if not j.destruido then linha(string.format("PREMIO DO %do LUGAR", j.posicao), C.PREMIO_POSICAO[j.posicao] or 0) end
-  linha(string.format("ABATES (%d)", j.abates), j.abates * C.PREMIO_ABATE)
-  if j.sobrevivente then linha("ULTIMO SOBREVIVENTE", C.PREMIO_SOBREVIVENTE) end
+  if not j.destruido then linha(string.format("PREMIO DO %do LUGAR", j.posicao), P.posicao[j.posicao] or 0) end
+  linha(string.format("ABATES (%d)", j.abates), j.abates * P.abate)
+  if j.sobrevivente then linha("ULTIMO SOBREVIVENTE", P.sobrevivente) end
   linha("DINHEIRO PEGO NA PISTA", j.dinheiro)
   local total = 0
   for _, l in ipairs(linhas) do total = total + l[2] end

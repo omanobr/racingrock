@@ -18,6 +18,12 @@ local TELAS = {
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
   teste = require "telas.teste",
+  rapida = require "telas.rapida",
+  opcoes = require "telas.opcoes",
+  historia = require "telas.historia",
+  senha = require "telas.senha",
+  garagem = require "telas.garagem",
+  final = require "telas.final",
 }
 
 Jogo = { tela = nil }

@@ -27,7 +27,9 @@ end
 function Tela:atualizar()
   if Entrada.pausar() then self.pausa = not self.pausa end
   if self.pausa then
-    if Entrada.voltar() then Jogo.ir("titulo") end
+    -- sair no meio: no modo historia volta para a garagem sem mudar nada (como se a corrida
+    -- nao tivesse acontecido)
+    if Entrada.voltar() then Jogo.ir(self.corrida.campeonato and "garagem" or "titulo") end
     return
   end
   local r = self.corrida
