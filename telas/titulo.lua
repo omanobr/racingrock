@@ -25,12 +25,24 @@ local OPCOES = {
     Jogo.ir("corrida", { pista = C.PISTA, voltas = Pista.LISTA[C.PISTA].voltas, autopiloto = true })
   end },
   { "TESTE DE BOTOES", function() Jogo.ir("teste") end },
-  { "TESTE DE DESEMPENHO", function() Jogo.ir("desempenho") end },
   { "FPS NO RODAPE", function() Jogo.rodape = not Jogo.rodape end, function() return Jogo.rodape and "SIM" or "NAO" end },
 }
 
 function Tela.nova()
   return setmetatable({ escolha = 1 }, Tela)
+end
+
+-- ficha do carro escolhido (carros.lua), montada so quando o carro muda
+local TRACAO = { traseira = "TRASEIRA", dianteira = "DIANTEIRA", integral = "INTEGRAL" }
+local ficha_de, ficha_texto
+local function ficha()
+  if ficha_de ~= C.MODELO then
+    local m = Carros[Carros.indice(C.MODELO)]
+    ficha_de = C.MODELO
+    ficha_texto = string.format("VELOC %d  ACEL %d  ADER %d  BLIND %d  ARMA %d  TRACAO %s", m.velocidade,
+      m.aceleracao, m.aderencia, m.blindagem, m.arma, TRACAO[m.tracao] or "?")
+  end
+  return ficha_texto
 end
 
 function Tela:atualizar()
@@ -55,6 +67,8 @@ function Tela:desenhar()
       ui.print(texto, 120, y, Cores.cinza_claro)
     end
   end
+  local f = ficha()
+  ui.print(f, 240 - #f * 3, 232, Cores.amarelo)
   ui.print("v" .. C.VERSAO .. "  " .. Entrada.NOME.confirmar .. ": ESCOLHER", 8, 258, Cores.cinza)
 end
 

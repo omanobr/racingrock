@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.23"
+C.VERSAO = "0.24"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -98,10 +98,29 @@ C.IA_ZONA_MORTA = 0.06  -- radianos: nao mexe o volante se o erro for menor
 C.IA_ELASTICO = {       -- potencia (M) x este fator conforme a distancia para o jogador (pontos de 16 px)
   atras_longe = 1.12, atras = 1.06, frente = 0.95, frente_longe = 0.88, longe = 40,
 }
--- potencia (M) dos carros do computador e do jogador nesta versao de teste
-C.M_JOGADOR = 3.0
-C.M_IA = { 2.85, 2.95, 3.05 }
-C.ADERENCIA = 0.3       -- "escorregamento" do pneu no Death Rally: 0.5 (pior) a 0.1 (melhor)
+-- Carros com personalidade (ideia do Felipe): a ficha de cada modelo (carros.lua, notas 1 a 5)
+-- vira os numeros da fisica. Nota 1 -> o primeiro valor, nota 5 -> o segundo.
+C.FICHA_M = { 2.75, 3.25 }          -- velocidade: potencia M (velocidade final ~54*M px/s)
+C.FICHA_ARRANQUE = { 0.8, 1.3 }     -- aceleracao: forca parado (perto da velocidade final vale 1:
+                                    -- muda o quanto demora para chegar la, nao a final)
+C.FICHA_ADERENCIA = { 0.42, 0.18 }  -- aderencia: escorregamento do pneu (Death Rally: 0.5 o pior, 0.1 o melhor)
+C.IA_FATOR_M = { 0.95, 0.98, 1.01 } -- os 3 do computador: potencia do modelo x isto (o elastico ajusta)
+C.ADERENCIA = 0.3       -- escorregamento de quem nao tem ficha
+-- tracao, acelerando com o volante virado (acima de TRACAO_VEL px/s):
+--   traseira: a traseira sai (gira mais e escorrega mais: da para fazer drift no acelerador)
+--   dianteira: sai de frente (gira menos, abre a curva); tirando o pe, fecha a curva
+--   integral: no meio termo, escorrega menos acelerando
+-- arranque: multiplica o arranque da ficha. A traseira escorrega mais, mas arranca melhor (o peso
+-- vai para as rodas de tras): ganha na saida da curva (pedido do Felipe: o que atrapalha de um
+-- lado tem de compensar do outro)
+-- alivia: o computador tira o pe quando o volante esta mais longe que isso (radianos) da direcao
+-- certa (de traseira, mais cedo, senao roda)
+C.TRACAO_VEL = 60 * C.ESCALA
+C.TRACAO = {
+  traseira = { giro = 1.1, deslize = 1.4, deslize_max = 1.25, giro_solto = 1.0, alivia = 0.2, arranque = 1.15 },
+  dianteira = { giro = 0.85, deslize = 0.8, deslize_max = 1.0, giro_solto = 1.08, alivia = 0.3, arranque = 1.0 },
+  integral = { giro = 1.0, deslize = 0.8, deslize_max = 0.9, giro_solto = 1.0, alivia = 0.3, arranque = 1.1 },
+}
 
 -- Camera: olha para onde o carro VAI (a velocidade, nao o bico: toques curtos no direcional
 -- nao balancam a tela), ate CAM_FRENTE px, e chega la com uma mola suave

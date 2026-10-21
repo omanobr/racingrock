@@ -3,6 +3,7 @@
 -- telas/corrida.lua chama Combate:desenhar. Os comandos de cada carro (c.atirando, c.soltar_mina)
 -- vem do jogador (corrida.lua) ou do computador (ia.lua).
 local C = require "config"
+local Cores = require "cores"
 local Pista = require "pista"
 local Efx = require "dados_efeitos"
 
@@ -14,10 +15,7 @@ local PAREDE, FORA = Pista.PAREDE, Pista.FORA
 local ITENS = { "municao", "turbo", "dinheiro", "conserto" }
 local CHANCE = { 30, 35, 15, 20 }                       -- em %, como no Death Rally (sem o cogumelo)
 
--- ficha 1..5 -> valor entre a e b
-local function escala(nota, faixa)
-  return faixa[1] + (faixa[2] - faixa[1]) * ((nota or 1) - 1) / 4
-end
+local escala = require("carros").escala
 
 function Combate.novo(corrida)
   local cb = setmetatable({ corrida = corrida, minas = {}, itens = {}, efeitos = {}, proximo_item = 2,
@@ -68,8 +66,11 @@ local function batida(c, velocidade)
   return p < C.BATIDA_MAX and p or C.BATIDA_MAX
 end
 
--- metralhadora: um raio de ARMA_ALCANCE px saindo do bico, ate o primeiro carro ou muro. O
--- computador mira com erro (c.mira_erro, sorteado a cada rajada em ia.lua): pode errar.
+-- metralhadora: um raio de ARMA_ALCANCE px saindo do bico, ate o primeiro carro ou muro, com o
+-- dano na hora (hitscan, como no Death Rally). O computador mira com erro (c.mira_erro, sorteado
+-- a cada rajada em ia.lua): pode errar. Na tela (pedido do Felipe): so o clarao no bico de quem
+-- atira e a faisca onde acertou (carro ou muro), nada no caminho (ate a v0.23, 3 pontos andavam
+-- pelo raio e pareciam balas voando).
 local function atirar(self, c, dt)
   local s, co = sin(c.ang + c.mira_erro), cos(c.ang + c.mira_erro)
   local fx, fy = s, -co                                 -- para a frente
@@ -86,17 +87,19 @@ local function atirar(self, c, dt)
     end
   end
   local pista = self.corrida.pista
+  local muro = false
   for d = 8, alcance, 8 do                              -- o muro segura o tiro
     local p = pista:piso(bx + fx * d, by + fy * d)
-    if p == PAREDE or p == FORA then alcance, alvo = d, nil break end
+    if p == PAREDE or p == FORA then alcance, alvo, muro = d, nil, true break end
   end
   c.municao = c.municao - dt
-  c.tiro_x, c.tiro_y = bx + fx * alcance, by + fy * alcance
-  c.tiro_bx, c.tiro_by = bx, by
-  c.relogio_faisca = (c.relogio_faisca or 0) - dt
-  if c.relogio_faisca <= 0 then
-    c.relogio_faisca = 0.12
-    self:efeito("faisca", c.tiro_x, c.tiro_y)
+  c.tiro_x, c.tiro_y = bx + fx * 3, by + fy * 3         -- o clarao, logo a frente do bico
+  if alvo or muro then
+    c.relogio_faisca = (c.relogio_faisca or 0) - dt
+    if c.relogio_faisca <= 0 then
+      c.relogio_faisca = 0.12
+      self:efeito("faisca", bx + fx * alcance, by + fy * alcance)
+    end
   end
   if alvo then self:dano(alvo, (1024 - alvo.blindagem) * c.fator_arma * C.QUADROS_DR * dt, "tiro", c) end
 end
@@ -259,14 +262,12 @@ function Combate:desenhar_cima(x0, y0, quadro, cor_tiro)
   local e16, e32 = self.e16, self.e32
   local min_x, max_x = 16, TELA_W - 17                 -- dentro das faixas pretas
   for _, c in ipairs(self.corrida.carros) do
-    if c.tiro_x then                                   -- rastro das balas: 3 pontos andando no raio
-      local ax, ay, bx, by = c.tiro_bx, c.tiro_by, c.tiro_x, c.tiro_y
-      for k = 0, 2 do
-        local f = ((quadro * 0.15) + k / 3) % 1
-        local px, py = (ax + (bx - ax) * f - x0) // 1, (ay + (by - ay) * f - y0) // 1
-        if px >= min_x and px <= max_x and py >= 0 and py < TELA_H - 1 then
-          ui.rectfill(px, py, px + 1, py + 1, cor_tiro)
-        end
+    if c.tiro_x then                                   -- clarao no bico: pisca (3x3 e 2x2)
+      local r = (quadro % 3 == 0) and 1 or 0
+      local px, py = (c.tiro_x - x0) // 1, (c.tiro_y - y0) // 1
+      if px - r >= min_x and px + 1 + r <= max_x and py - r >= 0 and py + 1 + r < TELA_H then
+        ui.rectfill(px - r, py - r, px + 1 + r, py + 1 + r, cor_tiro)
+        if r == 1 then ui.rectfill(px, py, px + 1, py + 1, Cores.branco) end
       end
     end
     if c.destruido then

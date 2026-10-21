@@ -3,6 +3,8 @@
 -- O carro tem uma direcao (ang: 0 = para cima, cresce no sentido horario, em radianos) e
 -- uma velocidade (v, px/s; negativa = de re). Enquanto vira, cresce um "deslize": o carro
 -- anda um pouco de lado, para fora da curva, mais com pneu ruim (aderencia alta) e na terra.
+-- Cada modelo tem a sua ficha (carros.lua -> corrida.lua): potencia M, arranque, aderencia e
+-- tracao (traseira sai de traseira acelerando na curva, dianteira sai de frente).
 -- Batidas em outros carros viram um empurrao (kx, ky) que some rapido.
 -- Os comandos (acel, freio, volante, turbo) sao postos pelo jogador ou pelo computador.
 local C = require "config"
@@ -39,6 +41,8 @@ function Carro.novo(def)
   c.v, c.vx, c.vy, c.deslize, c.kx, c.ky = 0, 0, 0, 0, 0, 0
   c.M = def.M
   c.aderencia = def.aderencia or C.ADERENCIA
+  c.tracao = C.TRACAO[def.tracao] or C.TRACAO.integral
+  c.arranque = (def.arranque or 1) * c.tracao.arranque
   c.giro = math.rad(3.75 / (C.GIRO_BASE - 0.05 * (def.motor or 0)) * 70)
   c.vmax = (C.ACEL * c.M) / (C.ARRASTO + C.ARRASTO_ACEL)
   c.acel, c.freio, c.turbo, c.volante = false, false, false, 0
@@ -83,7 +87,10 @@ function Carro:atualizar(dt, pista)
     self.turbo_carga = self.turbo_carga + 0.0137 * dt
     if self.turbo_carga > 1 then self.turbo_carga = 1 end
     if self.acel then
-      v = v + C.ACEL * M * dt
+      -- arranque da ficha: forte parado, some perto da velocidade final (que nao muda)
+      local f = v / self.vmax
+      if f < 0 then f = 0 elseif f > 1 then f = 1 end
+      v = v + C.ACEL * M * (1 + (self.arranque - 1) * (1 - f)) * dt
       k = k + C.ARRASTO_ACEL
     end
   end
@@ -108,9 +115,14 @@ function Carro:atualizar(dt, pista)
   -- devagar; de re, ao contrario. Encostado no muro pode girar, desde que o giro nao enfie o
   -- carro mais (no maximo uma ponta encostada): era isso que prendia o carro nos cantos.
   local vol = self.volante
+  -- tracao: acelerando com o volante virado, a traseira sai (traseira) ou o carro abre a curva
+  -- (dianteira); tirando o pe, a dianteira fecha a curva
+  local T = self.tracao
+  local puxando = (self.acel or turbo) and v > C.TRACAO_VEL
   if vol ~= 0 then
     local f = abs(v) / C.GIRO_VEL
     if f < C.GIRO_PARADO then f = C.GIRO_PARADO elseif f > 1 then f = 1 end
+    if puxando then f = f * T.giro elseif v > C.TRACAO_VEL then f = f * T.giro_solto end
     local giro = self.giro * f * dt * vol
     if v < 0 then giro = -giro end
     local a = (self.ang + giro) % DOIS_PI
@@ -125,13 +137,19 @@ function Carro:atualizar(dt, pista)
 
   -- deslize
   local d = self.deslize
-  if v > 0 then d = d + vol * C.DESLIZE_SOBE * dt end
+  local maximo = C.DESLIZE_MAX
+  if puxando then
+    if v > 0 then d = d + vol * C.DESLIZE_SOBE * T.deslize * dt end
+    maximo = maximo * T.deslize_max
+  elseif v > 0 then
+    d = d + vol * C.DESLIZE_SOBE * dt
+  end
   if d > 0 then
     d = d - C.DESLIZE_DESCE * dt
-    if d < 0 then d = 0 elseif d > C.DESLIZE_MAX then d = C.DESLIZE_MAX end
+    if d < 0 then d = 0 elseif d > maximo then d = maximo end
   elseif d < 0 then
     d = d + C.DESLIZE_DESCE * dt
-    if d > 0 then d = 0 elseif d < -C.DESLIZE_MAX then d = -C.DESLIZE_MAX end
+    if d > 0 then d = 0 elseif d < -maximo then d = -maximo end
   end
   self.deslize = d
   local lado = d * (v / (70 * C.ESCALA)) * ader / M
@@ -235,13 +253,14 @@ function Carro:desencostar(m, n, pista)
   if depois < n then self.x, self.y = x, y end
 end
 
--- folha (1 ou 2) e tile (com o espelho, +1024) da direcao atual
+-- tile da sombra (com o espelho, +1024) da direcao atual
 function Carro:quadro_sombra()
   local d = (self.ang * SOMBRA_DIRECOES / DOIS_PI + 0.5) // 1 % SOMBRA_DIRECOES
   if d > SOMBRA_DIRECOES // 2 then return SOMBRA_DIRECOES - d + 1024 end
   return d
 end
 
+-- folha (1 ou 2) e tile (com o espelho, +1024) da direcao atual
 function Carro:quadro()
   local d = (self.ang * DIRECOES / DOIS_PI + 0.5) // 1 % DIRECOES
   local espelho = 0

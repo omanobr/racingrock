@@ -48,7 +48,10 @@ function Corrida.nova(opcoes)
     local m = lista[i]
     local c = Carro.novo({
       x = g[1], y = g[2], ang = g[3],
-      M = i == 1 and C.M_JOGADOR or C.M_IA[i - 1],
+      M = Carros.escala(m.velocidade, C.FICHA_M) * (i == 1 and 1 or C.IA_FATOR_M[i - 1]),
+      arranque = Carros.escala(m.aceleracao, C.FICHA_ARRANQUE),
+      aderencia = Carros.escala(m.aderencia, C.FICHA_ADERENCIA),
+      tracao = m.tracao,
       nome = i == 1 and "VOCE" or m.nome, humano = i == 1, modelo = m.id,
       img = Sprites.img.car[m.id .. "_" .. CORES[i]], img2 = Sprites.img.car[m.id .. "_" .. CORES[i] .. "2"],
     })

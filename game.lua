@@ -18,7 +18,6 @@ local TELAS = {
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
   teste = require "telas.teste",
-  desempenho = require "telas.desempenho",
 }
 
 Jogo = { tela = nil }
@@ -30,9 +29,8 @@ function Jogo.ir(nome, ...)
 end
 
 if DEV.cena == "corrida" then
-  Jogo.ir("corrida", { pista = DEV.pista or 1, voltas = DEV.voltas or C.VOLTAS, autopiloto = DEV.autopiloto })
-elseif DEV.cena == "desempenho" then
-  Jogo.ir("desempenho")
+  Jogo.ir("corrida", { pista = DEV.pista or 1, voltas = DEV.voltas or C.VOLTAS, autopiloto = DEV.autopiloto,
+                       modelo = DEV.modelo })
 else
   Jogo.ir("titulo")
 end

@@ -42,11 +42,16 @@ function IA.pilotar(c, corrida, dt)
 
   local curva = abs(linha.curva[j])
   if curva > PI / 2 then curva = PI / 2 end
-  local alvo = c.vmax * (1 - C.IA_CURVA * curva / (PI / 2)) * c.elastico
+  -- na curva tira o pe; quanto pior o pneu (aderencia alta), mais (0,3 = o IA_CURVA puro)
+  local alvo = c.vmax * (1 - C.IA_CURVA * (0.4 + 2 * c.aderencia) * curva / (PI / 2)) * c.elastico
   -- carro desalinhado com a pista (rodou, bateu): devagar ate se endireitar
   if erro > 1.2 or erro < -1.2 then alvo = alvo * 0.4 end
   c.acel = c.v < alvo
   c.freio = c.v > alvo * 1.25
+  -- curva apertando (volante longe da direcao certa): tira o pe, como um piloto. Com a tracao da
+  -- ficha, acelerar na curva faz a traseira sair ou o carro abrir a curva (carro.lua)
+  local alivia = c.tracao.alivia
+  if (erro > alivia or erro < -alivia) and c.v > C.TRACAO_VEL then c.acel = false end
   c.turbo = false
 
   -- troca de faixa de vez em quando, e para desviar de quem esta logo a frente
