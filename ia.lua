@@ -60,9 +60,9 @@ function IA.pilotar(c, corrida, dt)
     if o ~= c then
       local dx, dy = o.x - c.x, o.y - c.y
       local adiante = dx * frente_x + dy * frente_y
-      if adiante > 0 and adiante < 40 then
+      if adiante > 0 and adiante < 1.5 * c.comprimento then
         local de_lado = dx * -frente_y + dy * frente_x   -- positivo: o outro esta a direita
-        if de_lado < 14 and de_lado > -14 then
+        if de_lado < c.largura and de_lado > -c.largura then
           c.faixa = de_lado > 0 and -0.45 or 0.45
           c.troca_faixa = 1.5
         end

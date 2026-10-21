@@ -7,6 +7,7 @@
 -- Os comandos (acel, freio, volante, turbo) sao postos pelo jogador ou pelo computador.
 local C = require "config"
 local Pista = require "pista"
+local Dados = require "dados_carros"
 
 local Carro = {}
 Carro.__index = Carro
@@ -15,13 +16,21 @@ local sin, cos, atan, exp, abs = math.sin, math.cos, math.atan, math.exp, math.a
 local DOIS_PI = 2 * math.pi
 local PAREDE, FORA = Pista.PAREDE, Pista.FORA
 
--- pontos de contato com o muro (para frente, para a direita), em px, como no Death Rally:
--- bico (bit 1), cantos da frente (2 esquerdo, 4 direito), cantos de tras (8, 16) e o meio das
--- laterais (32, 64). O carro tem ~26 x 13.
-local SONDA_F = { 13, 10, 10, -11, -11, 0, 0 }
-local SONDA_R = { 0, -6, 6, -6, 6, -7, 7 }
+-- pontos de contato com o muro, como no Death Rally: bico (bit 1), cantos da frente (2 esquerdo,
+-- 4 direito), cantos de tras (8, 16) e o meio das laterais (32, 64). Medidos a partir do
+-- tamanho de cada modelo (dados_carros.lua): para frente (F) e para a direita (R), em px.
 local ESQUERDA = 2 | 8 | 32
 local DIREITA = 4 | 16 | 64
+
+local function sondas(comprimento, largura)
+  local f, r = comprimento / 2, largura / 2
+  return { f, f - 3, f - 3, -f + 2, -f + 2, 0, 0 }, { 0, -r + 1, r - 1, -r + 1, r - 1, -r, r }
+end
+
+-- desenho: DIRECOES direcoes; os quadros 0..metade estao nas folhas (0..POR_FOLHA-1 na primeira,
+-- o resto na segunda) e as outras direcoes sao esses espelhados (+1024)
+local DIRECOES, POR_FOLHA = Dados.direcoes, Dados.por_folha
+Carro.MEIO_QUADRO = Dados.quadro // 2
 
 function Carro.novo(def)
   local c = setmetatable({}, Carro)
@@ -33,7 +42,11 @@ function Carro.novo(def)
   c.vmax = (C.ACEL * c.M) / (C.ARRASTO + C.ARRASTO_ACEL)
   c.acel, c.freio, c.turbo, c.volante = false, false, false, 0
   c.turbo_carga = 1
-  c.nome, c.img, c.sombra, c.humano = def.nome, def.img, def.sombra, def.humano
+  c.nome, c.humano = def.nome, def.humano
+  c.img, c.img2, c.sombra, c.sombra2 = def.img, def.img2, def.sombra, def.sombra2   -- as 2 folhas de cada
+  local medida = Dados[def.modelo] or { comprimento = 30, largura = 15 }
+  c.comprimento, c.largura = medida.comprimento, medida.largura
+  c.sonda_f, c.sonda_r = sondas(c.comprimento, c.largura)
   c.batidas = 0
   c.no_muro = 0        -- segundos com o meio do carro no muro (corrida.lua resgata)
   c.tempo_travado = 0  -- segundos encostado no muro sem conseguir sair
@@ -44,8 +57,9 @@ end
 function Carro:bate(x, y, a, pista)
   local s, c = sin(a), cos(a)
   local m, n, bit = 0, 0, 1
+  local sf, sr = self.sonda_f, self.sonda_r
   for i = 1, 7 do
-    local f, r = SONDA_F[i], SONDA_R[i]
+    local f, r = sf[i], sr[i]
     local p = pista:piso(x + s * f + c * r, y - c * f + s * r)
     if p == PAREDE or p == FORA then m, n = m | bit, n + 1 end
     bit = bit << 1
@@ -111,7 +125,7 @@ function Carro:atualizar(dt, pista)
     if d > 0 then d = 0 elseif d < -C.DESLIZE_MAX then d = -C.DESLIZE_MAX end
   end
   self.deslize = d
-  local lado = d * (v / 70) * ader / M
+  local lado = d * (v / (70 * C.ESCALA)) * ader / M
   if lado > C.DESLIZE_FREIA or lado < -C.DESLIZE_FREIA then k = k + C.ARRASTO end
 
   v = v * exp(-k * dt)
@@ -157,11 +171,13 @@ function Carro:mover(nx, ny, pista)
   end
 end
 
--- quadro da folha (0 a 24) e espelho, para a direcao atual (48 direcoes de 7,5 graus)
+-- folha (1 ou 2) e tile (com o espelho, +1024) da direcao atual
 function Carro:quadro()
-  local d = (self.ang * 48 / DOIS_PI + 0.5) // 1 % 48
-  if d <= 24 then return d end
-  return (48 - d) + 1024
+  local d = (self.ang * DIRECOES / DOIS_PI + 0.5) // 1 % DIRECOES
+  local espelho = 0
+  if d > DIRECOES // 2 then d, espelho = DIRECOES - d, 1024 end
+  if d < POR_FOLHA then return 1, d + espelho end
+  return 2, d - POR_FOLHA + espelho
 end
 
 return Carro

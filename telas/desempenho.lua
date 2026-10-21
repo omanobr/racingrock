@@ -37,7 +37,8 @@ local function folhas(n)
       local c0, c1 = (k - 1) * 30 // n, k * 30 // n - 1
       for c = c0, c1 do
         local x = c * TS
-        for r = 0, 16 do tile(img, (r * 7 + c + t) % 36, x, r * TS) end
+        -- % 16: a menor folha da lista (a 2a da pista de treino) tem poucos tiles
+        for r = 0, 16 do tile(img, (r * 7 + c + t) % 16, x, r * TS) end
       end
     end
   end

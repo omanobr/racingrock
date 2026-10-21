@@ -10,7 +10,7 @@ local Carros = require "carros"
 local Corrida = {}
 Corrida.__index = Corrida
 
-local sqrt = math.sqrt
+local sqrt, sin, cos = math.sqrt, math.sin, math.cos
 
 local CORES = { "ver", "azu", "ama", "pra" }   -- o jogador e o vermelho
 
@@ -48,8 +48,9 @@ function Corrida.nova(opcoes)
     local c = Carro.novo({
       x = g[1], y = g[2], ang = g[3],
       M = i == 1 and C.M_JOGADOR or C.M_IA[i - 1],
-      nome = i == 1 and "VOCE" or m.nome, img = Sprites.img.car[m.id .. "_" .. CORES[i]], humano = i == 1,
-      sombra = Sprites.img.car[m.id .. "_som"],
+      nome = i == 1 and "VOCE" or m.nome, humano = i == 1, modelo = m.id,
+      img = Sprites.img.car[m.id .. "_" .. CORES[i]], img2 = Sprites.img.car[m.id .. "_" .. CORES[i] .. "2"],
+      sombra = Sprites.img.car[m.id .. "_som"], sombra2 = Sprites.img.car[m.id .. "_som2"],
     })
     c.modelo = m
     c.idx = p:mais_perto(c.x, c.y)
@@ -74,27 +75,49 @@ local function comandos_do_jogador(c)
   c.volante = (Entrada.direita(0) and 1 or 0) - (Entrada.esquerda(0) and 1 or 0)
 end
 
--- batidas entre carros: circulos; cada um recebe parte da diferenca de velocidade (empurrao)
--- e eles sao afastados devagar (tambem como empurrao, para o muro continuar valendo)
+-- batidas entre carros: cada carro e 2 circulos (frente e tras, da largura do carro); no par de
+-- circulos mais encavalado, cada um recebe parte da diferenca de velocidade (empurrao) e eles sao
+-- afastados devagar (tambem como empurrao, para o muro continuar valendo)
+local function circulos(c)
+  local q = c.comprimento / 4
+  local fx, fy = sin(c.ang) * q, -cos(c.ang) * q
+  c.c1x, c.c1y, c.c2x, c.c2y = c.x + fx, c.y + fy, c.x - fx, c.y - fy
+  c.raio = c.largura / 2
+end
+
 function Corrida:batidas_entre_carros()
-  local carros, R2 = self.carros, (2 * C.RAIO_CARRO) ^ 2
+  local carros = self.carros
+  for i = 1, #carros do circulos(carros[i]) end
   for i = 1, #carros - 1 do
     local a = carros[i]
     for j = i + 1, #carros do
       local b = carros[j]
-      local dx, dy = b.x - a.x, b.y - a.y
-      local d2 = dx * dx + dy * dy
-      if d2 < R2 then
-        local d = sqrt(d2)
-        if d < 0.01 then dx, dy, d = 1, 0, 1 end
-        local nx, ny = dx / d, dy / d
-        local aproxima = (b.vx + b.kx - a.vx - a.kx) * nx + (b.vy + b.ky - a.vy - a.ky) * ny
-        local imp = 40 * (2 * C.RAIO_CARRO - d)       -- afasta
-        if aproxima < 0 then imp = imp - aproxima * C.EMPURRAO end
-        a.kx, a.ky = a.kx - nx * imp, a.ky - ny * imp
-        b.kx, b.ky = b.kx + nx * imp, b.ky + ny * imp
-        a.v, b.v = a.v * 0.97, b.v * 0.97
-        a.bateu_carro, b.bateu_carro = true, true
+      local soma = a.raio + b.raio
+      local dx0, dy0 = b.x - a.x, b.y - a.y
+      if dx0 * dx0 + dy0 * dy0 < (soma + (a.comprimento + b.comprimento) / 2) ^ 2 then   -- perto: confere os circulos
+        local fundo, nx, ny = 0, 0, 0
+        for ka = 1, 2 do
+          local ax, ay = ka == 1 and a.c1x or a.c2x, ka == 1 and a.c1y or a.c2y
+          for kb = 1, 2 do
+            local bx, by = kb == 1 and b.c1x or b.c2x, kb == 1 and b.c1y or b.c2y
+            local dx, dy = bx - ax, by - ay
+            local d2 = dx * dx + dy * dy
+            if d2 < soma * soma then
+              local d = sqrt(d2)
+              if d < 0.01 then dx, dy, d = 1, 0, 1 end
+              if soma - d > fundo then fundo, nx, ny = soma - d, dx / d, dy / d end
+            end
+          end
+        end
+        if fundo > 0 then
+          local aproxima = (b.vx + b.kx - a.vx - a.kx) * nx + (b.vy + b.ky - a.vy - a.ky) * ny
+          local imp = 40 * fundo       -- afasta
+          if aproxima < 0 then imp = imp - aproxima * C.EMPURRAO end
+          a.kx, a.ky = a.kx - nx * imp, a.ky - ny * imp
+          b.kx, b.ky = b.kx + nx * imp, b.ky + ny * imp
+          a.v, b.v = a.v * 0.97, b.v * 0.97
+          a.bateu_carro, b.bateu_carro = true, true
+        end
       end
     end
   end

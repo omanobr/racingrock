@@ -6,6 +6,7 @@ local Hud = require "hud"
 local Tempo = require "tempo"
 local Entrada = require "entrada"
 local Cores = require "cores"
+local Carro = require "carro"
 
 local Tela = {}
 Tela.__index = Tela
@@ -17,7 +18,7 @@ function Tela.nova(opcoes)
   local t = setmetatable({}, Tela)
   t.corrida = Corrida.nova(opcoes or {})
   t.camera = Camera.nova(t.corrida.pista, t.corrida.jogador)
-  t.quadros = {}
+  t.folha, t.tiles = {}, {}
   t.pausa = false
   return t
 end
@@ -39,26 +40,28 @@ function Tela:desenhar()
   local x0, y0 = cam.x0, cam.y0
   Fundo.desenhar(r.pista, x0, y0)
 
-  -- sombras (do mesmo modelo = mesma folha, em seguida: uma carga so) e depois os carros. Carro (com a
-  -- sombra, 3 px para a direita) que nao cabe inteiro na largura da tela nao e desenhado: o
-  -- console desenha errado o que fica cortado pela borda; a faixa preta esconde o sumico.
-  local tile, carros, quadros = ui.tile, r.carros, self.quadros
+  -- sombras e depois os carros (cada modelo tem 2 folhas: as direcoes estao divididas entre elas).
+  -- Carro (com a sombra, 3 px para a direita) que nao cabe inteiro na largura da tela nao e
+  -- desenhado: o console desenha errado o que fica cortado pela borda; a faixa preta esconde.
+  local tile, carros, folha, tiles = ui.tile, r.carros, self.folha, self.tiles
+  local meio = Carro.MEIO_QUADRO
+  local limite = TELA_W - 2 * meio - 3
   for i = 1, #carros do
     local c = carros[i]
-    local sx, sy = (c.x - x0) // 1 - 16, (c.y - y0) // 1 - 16
-    if sx >= 0 and sx <= TELA_W - 35 and sy > -32 and sy < 270 then
-      local q = c:quadro()
-      quadros[i] = q
-      tile(c.sombra, q, sx + 3, sy + 3)
+    local sx, sy = (c.x - x0) // 1 - meio, (c.y - y0) // 1 - meio
+    if sx >= 0 and sx <= limite and sy > -2 * meio and sy < 270 then
+      local f, t = c:quadro()
+      folha[i], tiles[i] = f, t
+      tile(f == 1 and c.sombra or c.sombra2, t, sx + 3, sy + 3)
     else
-      quadros[i] = false
+      folha[i] = false
     end
   end
   for i = 1, #carros do
-    local q = quadros[i]
-    if q then
+    local f = folha[i]
+    if f then
       local c = carros[i]
-      tile(c.img, q, (c.x - x0) // 1 - 16, (c.y - y0) // 1 - 16)
+      tile(f == 1 and c.img or c.img2, tiles[i], (c.x - x0) // 1 - meio, (c.y - y0) // 1 - meio)
     end
   end
 
