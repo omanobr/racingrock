@@ -4,13 +4,13 @@
 DadosCarros = {
   quadro = 40, direcoes = 64, por_folha = 18,
   fusca = { comprimento = 31, largura = 14 },
-  uno = { comprimento = 30, largura = 15 },
+  uno = { comprimento = 30, largura = 16 },
   ka = { comprimento = 30, largura = 14 },
   saveiro = { comprimento = 34, largura = 14 },
   corsa = { comprimento = 32, largura = 16 },
   focus = { comprimento = 34, largura = 18 },
   monza = { comprimento = 34, largura = 16 },
-  opala = { comprimento = 35, largura = 16 },
+  opala = { comprimento = 34, largura = 16 },
   puma = { comprimento = 32, largura = 16 },
 }
 return DadosCarros
