@@ -13,14 +13,11 @@ local C = require "config"
 local Tempo = require "tempo"
 local Diag = require "diagnostico"
 
-if DEV.fundo then C.FUNDO = DEV.fundo end
-
 local TELAS = {
   titulo = require "telas.titulo",
   corrida = require "telas.corrida",
   resultado = require "telas.resultado",
   teste = require "telas.teste",
-  bordas = require "telas.bordas",
   desempenho = require "telas.desempenho",
 }
 

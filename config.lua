@@ -2,12 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.11"
-
--- Fundo da pista: "tiles" (ui.tile, um por tile, agrupados por folha), "mapa" (ui.map em
--- blocos fixos de 16x16 tiles) ou "visao" (ui.map numa tabela do tamanho da tela, refeita
--- quando a camera passa de um tile). O teste de desempenho compara os tres no aparelho.
-C.FUNDO = "tiles"
+C.VERSAO = "0.12"
 
 C.VOLTAS = 3
 C.CARROS = 4
@@ -40,6 +35,8 @@ C.MURO_VOLTA = -0.3     -- bateu de frente: volta com 30% da velocidade
 C.RAIO_CARRO = 8        -- colisao entre carros (circulo)
 C.EMPURRAO = 0.7        -- quanto da diferenca de velocidade passa de um carro para o outro
 C.EMPURRAO_FIM = 9.78   -- o empurrao some (1.15 por quadro)
+C.RESGATE = 0.4         -- segundos com o meio do carro no muro (0,1 s fora da pista): volta para a pista
+C.RESGATE_TRAVADO = 1.5 -- segundos encostado no muro sem conseguir sair: idem
 
 -- Carros do computador
 C.IA_OLHAR = 3          -- pontos da linha central a frente (16 px cada), + 1 a cada IA_OLHAR_VEL px/s

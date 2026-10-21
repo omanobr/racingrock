@@ -1,5 +1,4 @@
 -- Tela da corrida: atualiza as regras (corrida.lua) e desenha pista, carros e painel.
-local C = require "config"
 local Corrida = require "corrida"
 local Camera = require "camera"
 local Fundo = require "fundo"
@@ -10,6 +9,8 @@ local Cores = require "cores"
 
 local Tela = {}
 Tela.__index = Tela
+
+local TELA_W = 480
 
 -- opcoes: { pista, voltas, autopiloto }
 function Tela.nova(opcoes)
@@ -37,15 +38,17 @@ end
 function Tela:desenhar()
   local r, cam = self.corrida, self.camera
   local x0, y0 = cam.x0, cam.y0
-  Fundo.desenhar(r.pista, x0, y0, C.FUNDO)
+  Fundo.desenhar(r.pista, x0, y0)
 
-  -- sombras (todas da mesma folha, em seguida: uma carga so) e depois os carros
+  -- sombras (todas da mesma folha, em seguida: uma carga so) e depois os carros. Carro (com a
+  -- sombra, 3 px para a direita) que nao cabe inteiro na largura da tela nao e desenhado: o
+  -- console desenha errado o que fica cortado pela borda; a faixa preta esconde o sumico.
   local tile, carros, quadros = ui.tile, r.carros, self.quadros
   local sombra = self.sombra
   for i = 1, #carros do
     local c = carros[i]
     local sx, sy = (c.x - x0) // 1 - 16, (c.y - y0) // 1 - 16
-    if sx > -32 and sx < 480 and sy > -32 and sy < 270 then
+    if sx >= 0 and sx <= TELA_W - 35 and sy > -32 and sy < 270 then
       local q = c:quadro()
       quadros[i] = q
       tile(sombra, q, sx + 3, sy + 3)
@@ -61,12 +64,10 @@ function Tela:desenhar()
     end
   end
 
-  -- faixas pretas nos lados (opcao do menu): cobrem os tiles cortados nas bordas, que na
-  -- v0.1 apareceram trocados no aparelho
-  if Jogo.bordas then
-    ui.rectfill(0, 0, 15, 269, Cores.preto)
-    ui.rectfill(464, 0, 479, 269, Cores.preto)
-  end
+  -- faixas pretas nos lados: cobrem o vao das colunas de tiles que nao cabem inteiras
+  local m = Fundo.MARGEM
+  ui.rectfill(0, 0, m - 1, 269, Cores.preto)
+  ui.rectfill(TELA_W - m, 0, TELA_W - 1, 269, Cores.preto)
 
   Hud.desenhar(r)
   if self.pausa then

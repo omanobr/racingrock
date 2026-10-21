@@ -82,8 +82,17 @@ function Corrida:batidas_entre_carros()
   end
 end
 
+-- carro preso dentro do muro: volta para a linha central, parado, na direcao da pista
+function Corrida:resgatar(c)
+  local p = self.pista
+  c.x, c.y, c.ang = p.linha.x[c.idx], p.linha.y[c.idx], p.linha.ang[c.idx]
+  c.v, c.kx, c.ky, c.deslize, c.no_muro, c.tempo_travado = 0, 0, 0, 0, 0, 0
+  c.resgates = (c.resgates or 0) + 1
+end
+
 -- indice na linha central, voltas e "progresso" (voltas x pontos + ponto: maior = na frente)
 function Corrida:acompanhar(c)
+  if c.no_muro > C.RESGATE or c.tempo_travado > C.RESGATE_TRAVADO then self:resgatar(c) end
   local p = self.pista
   local n = p.n
   local antes = c.idx

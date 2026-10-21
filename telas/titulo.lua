@@ -6,24 +6,12 @@ local Cores = require "cores"
 local Tela = {}
 Tela.__index = Tela
 
-local FUNDOS = { "tiles", "visao", "mapa" }
-
-local function proximo_fundo()
-  for i, f in ipairs(FUNDOS) do
-    if f == C.FUNDO then C.FUNDO = FUNDOS[i % #FUNDOS + 1] return end
-  end
-  C.FUNDO = FUNDOS[1]
-end
-
 -- { texto, acao, valor (opcional: texto do valor atual) }
 local OPCOES = {
   { "CORRER (PISTA DE TREINO)", function() Jogo.ir("corrida", { pista = 1, voltas = C.VOLTAS }) end },
   { "DEMONSTRACAO (COMPUTADOR PILOTA)", function() Jogo.ir("corrida", { pista = 1, voltas = C.VOLTAS, autopiloto = true }) end },
   { "TESTE DE BOTOES", function() Jogo.ir("teste") end },
-  { "TESTE DE BORDAS", function() Jogo.ir("bordas") end },
   { "TESTE DE DESEMPENHO", function() Jogo.ir("desempenho") end },
-  { "FUNDO DA PISTA", proximo_fundo, function() return string.upper(C.FUNDO) end },
-  { "FAIXAS PRETAS NOS LADOS", function() Jogo.bordas = not Jogo.bordas end, function() return Jogo.bordas and "SIM" or "NAO" end },
   { "FPS NO RODAPE", function() Jogo.rodape = not Jogo.rodape end, function() return Jogo.rodape and "SIM" or "NAO" end },
 }
 

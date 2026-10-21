@@ -5,8 +5,10 @@ Pista.__index = Pista
 
 local byte = string.byte
 
--- letras do mapa de terreno (string.byte)
-Pista.ASFALTO, Pista.TERRA, Pista.PAREDE, Pista.CHEGADA = 48, 49, 50, 51
+-- letras do mapa de terreno (string.byte), das zonas da mascara de cada pista: pista (verde),
+-- gramado/terra (amarelo, mais devagar), muro (azul, bloqueia), linha de chegada (branco) e
+-- fora (vermelho: alem do muro; carro que chegar la volta para a pista)
+Pista.ASFALTO, Pista.TERRA, Pista.PAREDE, Pista.CHEGADA, Pista.FORA = 48, 49, 50, 51, 52
 
 local LISTA = { "p0" }   -- ids das pistas, na ordem do menu
 
@@ -24,11 +26,11 @@ function Pista.carregar(n)
   return p
 end
 
--- letra do terreno no ponto (x, y) do mundo; fora do mapa e parede
+-- letra do terreno no ponto (x, y) do mundo; fora do mapa e "fora"
 function Pista:piso(x, y)
   local linha = self.terreno[y // self.passo_terreno + 1]
-  if not linha or x < 0 then return 50 end
-  return byte(linha, x // self.passo_terreno + 1) or 50
+  if not linha or x < 0 then return 52 end
+  return byte(linha, x // self.passo_terreno + 1) or 52
 end
 
 -- avanca/recua o indice da linha central mais perto de (x, y), a partir de i (poucos passos

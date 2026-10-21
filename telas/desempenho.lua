@@ -3,10 +3,10 @@
 -- (cabo USB) ANTES de comecar: se o console travar, o ultimo nome do log e o culpado.
 --
 -- O que queremos descobrir: quanto custa ler folhas de tiles do cartao (cada folha diferente
--- desenhada no quadro e lida inteira: ~37 KB cada), e qual dos 3 jeitos de desenhar a pista
--- (fundo.lua) e o mais leve no console.
+-- desenhada no quadro e lida inteira: ~37 KB cada) e quanto pesam a pista e a corrida.
+-- (v0.1 no aparelho: tudo a 58,6-60 FPS. Os testes com ui.map sairam na v0.12: o ui.map manda
+-- pedacos cortados pela borda da tela, que o console desenha errado.)
 -- B: repete os testes. A: volta ao titulo.
-local C = require "config"
 local Pista = require "pista"
 local Fundo = require "fundo"
 local Entrada = require "entrada"
@@ -43,20 +43,6 @@ local function folhas(n)
   end
 end
 
-local function folhas_mapa(n)
-  local lista = folhas_teste()
-  local nomes = { "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "p0a", "p0b" }
-  local camada = { metadata = { width = 30, height = 17, tile_size = TS }, tilesets = {} }
-  for k = 1, n do camada[nomes[k]] = {}; camada.tilesets[nomes[k]] = nomes[k] end
-  for r = 0, 16 do
-    for c = 0, 29 do
-      local k = c * n // 30 + 1
-      camada[nomes[k]][r * 30 + c + 1] = (r * 7 + c) % 36
-    end
-  end
-  return function() ui.map(camada, 0, 0) end, lista
-end
-
 local function lua(mil)
   return function()
     local x = 0
@@ -75,7 +61,7 @@ local function carros()
   end
 end
 
-local function pista(modo)
+local function pista()
   local p
   return function(t)
     p = p or Pista.carregar(1)
@@ -84,21 +70,20 @@ local function pista(modo)
     local y0 = (p.linha.y[i] - 135) // 1
     if x0 < 0 then x0 = 0 elseif x0 > p.largura - 480 then x0 = p.largura - 480 end
     if y0 < 0 then y0 = 0 elseif y0 > p.altura - 270 then y0 = p.altura - 270 end
-    Fundo.desenhar(p, x0, y0, modo)
+    Fundo.desenhar(p, x0, y0)
+    ui.rectfill(0, 0, Fundo.MARGEM - 1, 269, Cores.preto)
+    ui.rectfill(480 - Fundo.MARGEM, 0, 479, 269, Cores.preto)
   end
 end
 
-local function corrida(modo)
+local function corrida()
   local tela
   return function()
     if not tela then
       tela = require("telas.corrida").nova({ pista = 1, voltas = 99, autopiloto = true })
     end
-    local antes = C.FUNDO
-    C.FUNDO = modo
     tela:atualizar()
     tela:desenhar()
-    C.FUNDO = antes
   end
 end
 
@@ -110,12 +95,8 @@ local function lista_de_testes()
     { "4 FOLHAS (~150 KB)", folhas(4) },
     { "8 FOLHAS (~300 KB)", folhas(8) },
     { "10 FOLHAS (~350 KB)", folhas(10) },
-    { "PISTA: TILES", pista("tiles") },
-    { "PISTA: VISAO (UI.MAP)", pista("visao") },
-    { "PISTA: MAPA (UI.MAP)", pista("mapa") },
-    { "8 FOLHAS EM UI.MAP", (folhas_mapa(8)) },
-    { "CORRIDA: TILES", corrida("tiles") },
-    { "CORRIDA: VISAO", corrida("visao") },
+    { "PISTA (CAMERA ANDANDO)", pista() },
+    { "CORRIDA (COMPUTADOR PILOTA)", corrida() },
   }
 end
 
