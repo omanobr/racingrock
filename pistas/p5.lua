@@ -4,6 +4,8 @@ return {
   largura = 1872, altura = 1056, tile = 16, colunas = 117, linhas = 66,
   terreno_px = 4, meia_largura = 37, voltas = 8,
   pasta = "p4",   -- img/<pasta>/: as folhas de tiles
+  -- regioes de tiles (a partir do canto de cima a esquerda): cada uma usa uma folha so
+  regiao_w = 16, regiao_h = 9,
   folhas = { "p4a", "p4b", "p4c", "p4d", "p4e", "p4f", "p4g", "p4h", "p4i", "p4j", "p4k", "p4l", "p4m", "p4n", "p4o", "p4p", "p4q", "p4r", "p4s", "p4t", "p4u", "p4v", "p4w", "p4x", "p4y", "p4z", "p4aa", "p4ab", "p4ac", "p4ad", "p4ae", "p4af", "p4ag", "p4ah", "p4ai", "p4aj", "p4ak", "p4al", "p4am", "p4an", "p4ao", "p4ap", "p4aq", "p4ar", "p4as", "p4at", "p4au", "p4av", "p4aw", "p4ax", "p4ay", "p4az", "p4ba", "p4bb" },
   -- por linha de tiles: folha * 2048 + numero do tile (+ 1024 = espelhado)
   mapa = {

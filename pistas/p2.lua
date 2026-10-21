@@ -4,6 +4,8 @@ return {
   largura = 1664, altura = 928, tile = 16, colunas = 104, linhas = 58,
   terreno_px = 4, meia_largura = 43, voltas = 3,
   pasta = "p2",   -- img/<pasta>/: as folhas de tiles
+  -- regioes de tiles (a partir do canto de cima a esquerda): cada uma usa uma folha so
+  regiao_w = 16, regiao_h = 9,
   folhas = { "p2a", "p2b", "p2c", "p2d", "p2e", "p2f", "p2g", "p2h", "p2i", "p2j", "p2k", "p2l", "p2m", "p2n", "p2o", "p2p", "p2q", "p2r", "p2s", "p2t", "p2u", "p2v", "p2w", "p2x", "p2y", "p2z", "p2aa", "p2ab", "p2ac", "p2ad", "p2ae", "p2af", "p2ag", "p2ah", "p2ai", "p2aj", "p2ak", "p2al", "p2am", "p2an", "p2ao", "p2ap", "p2aq" },
   -- por linha de tiles: folha * 2048 + numero do tile (+ 1024 = espelhado)
   mapa = {

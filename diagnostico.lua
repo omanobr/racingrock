@@ -42,8 +42,10 @@ function D.quadro()
   rodape_w = #texto * 6 + 3
   rodape_x = (480 - rodape_w) // 2
   if D.ligado then
-    print(string.format("RROCK %s tela=%s mem=%dKB quadro=%d passo=%.2f (%s) dframe=%s", texto,
-      Jogo.nome_tela or "?", collectgarbage("count") // 1, D.quadros, Tempo.passo, Tempo.fonte,
+    local t = Jogo.tela
+    local pista = t and t.corrida and t.corrida.pista.id or "-"
+    print(string.format("RROCK %s tela=%s pista=%s mem=%dKB quadro=%d passo=%.2f (%s) dframe=%s", texto,
+      Jogo.nome_tela or "?", pista, collectgarbage("count") // 1, D.quadros, Tempo.passo, Tempo.fonte,
       Tempo.media_frame and string.format("%.2f", Tempo.media_frame) or "?"))
   end
 end

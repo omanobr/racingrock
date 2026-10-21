@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.21"
+C.VERSAO = "0.22"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -80,7 +80,7 @@ C.PREMIO_SOBREVIVENTE = 1000
 C.ABATE_ATE = 4         -- segundos: quem acertou o carro por ultimo nesse tempo leva o abate
 C.ITENS_MAX = 4         -- itens na pista ao mesmo tempo
 C.ITEM_INTERVALO = 3    -- segundos entre um item novo e outro
-C.CONSERTO = 30         -- % de vida da chave
+C.CONSERTO = 15         -- % de vida da chave (30 na v0.21: o Felipe achou que curava demais)
 C.DINHEIRO_ITEM = 50
 C.FUMACA_VIDA = 40      -- abaixo disso o carro solta fumaca
 C.EFEITO_DURA = { explosao = 0.4, explosao_grande = 0.9, faisca = 0.15, fumaca = 0.8 }

@@ -4,6 +4,8 @@ return {
   largura = 1600, altura = 1216, tile = 16, colunas = 100, linhas = 76,
   terreno_px = 4, meia_largura = 40, voltas = 4,
   pasta = "p0",   -- img/<pasta>/: as folhas de tiles
+  -- regioes de tiles (a partir do canto de cima a esquerda): cada uma usa uma folha so
+  regiao_w = 16, regiao_h = 9,
   folhas = { "p0a", "p0b" },
   -- por linha de tiles: folha * 2048 + numero do tile (+ 1024 = espelhado)
   mapa = {

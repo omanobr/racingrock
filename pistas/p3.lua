@@ -4,6 +4,8 @@ return {
   largura = 1520, altura = 848, tile = 16, colunas = 95, linhas = 53,
   terreno_px = 4, meia_largura = 47, voltas = 3,
   pasta = "p3",   -- img/<pasta>/: as folhas de tiles
+  -- regioes de tiles (a partir do canto de cima a esquerda): cada uma usa uma folha so
+  regiao_w = 16, regiao_h = 9,
   folhas = { "p3a", "p3b", "p3c", "p3d", "p3e", "p3f", "p3g", "p3h", "p3i", "p3j", "p3k", "p3l", "p3m", "p3n", "p3o", "p3p", "p3q", "p3r", "p3s", "p3t", "p3u", "p3v", "p3w", "p3x", "p3y", "p3z", "p3aa", "p3ab", "p3ac", "p3ad", "p3ae", "p3af", "p3ag", "p3ah", "p3ai", "p3aj" },
   -- por linha de tiles: folha * 2048 + numero do tile (+ 1024 = espelhado)
   mapa = {

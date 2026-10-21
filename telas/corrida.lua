@@ -19,6 +19,7 @@ function Tela.nova(opcoes)
   t.corrida = Corrida.nova(opcoes or {})
   t.camera = Camera.nova(t.corrida.pista, t.corrida.jogador)
   t.folha, t.tiles = {}, {}
+  t.sombra = Sprites.img.car.sombra
   t.pausa = false
   return t
 end
@@ -41,11 +42,12 @@ function Tela:desenhar()
   Fundo.desenhar(r.pista, x0, y0)
   r.combate:desenhar_chao(x0, y0, r.quadros)
 
-  -- sombras e depois os carros (cada modelo tem 2 folhas: as direcoes estao divididas entre elas).
-  -- Carro (com a sombra, 3 px para a direita) que nao cabe inteiro na largura da tela nao e
-  -- desenhado: o console desenha errado o que fica cortado pela borda; a faixa preta esconde.
+  -- sombras (todas da mesma folha: uma carga so) e depois os carros (cada modelo tem 2 folhas:
+  -- as direcoes estao divididas entre elas). Carro (com a sombra, 3 px para a direita) que nao
+  -- cabe inteiro na largura da tela nao e desenhado: o console desenha errado o que fica
+  -- cortado pela borda; a faixa preta esconde.
   local tile, carros, folha, tiles = ui.tile, r.carros, self.folha, self.tiles
-  local meio = Carro.MEIO_QUADRO
+  local meio, desloca, sombra = Carro.MEIO_QUADRO, Carro.SOMBRA_DESLOCA, self.sombra
   local limite = TELA_W - 2 * meio - 3
   for i = 1, #carros do
     local c = carros[i]
@@ -53,7 +55,7 @@ function Tela:desenhar()
     if sx >= 0 and sx <= limite and sy > -2 * meio and sy < 270 then
       local f, t = c:quadro()
       folha[i], tiles[i] = f, t
-      tile(f == 1 and c.sombra or c.sombra2, t, sx + 3, sy + 3)
+      tile(sombra, c:quadro_sombra(), sx + desloca, sy + desloca)
     else
       folha[i] = false
     end

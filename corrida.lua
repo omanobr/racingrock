@@ -51,7 +51,6 @@ function Corrida.nova(opcoes)
       M = i == 1 and C.M_JOGADOR or C.M_IA[i - 1],
       nome = i == 1 and "VOCE" or m.nome, humano = i == 1, modelo = m.id,
       img = Sprites.img.car[m.id .. "_" .. CORES[i]], img2 = Sprites.img.car[m.id .. "_" .. CORES[i] .. "2"],
-      sombra = Sprites.img.car[m.id .. "_som"], sombra2 = Sprites.img.car[m.id .. "_som2"],
     })
     c.modelo = m
     c.idx = p:mais_perto(c.x, c.y)

@@ -29,6 +29,9 @@ end
 -- o resto na segunda) e as outras direcoes sao esses espelhados (+1024)
 local DIRECOES, POR_FOLHA = Dados.direcoes, Dados.por_folha
 Carro.MEIO_QUADRO = Dados.quadro // 2
+-- sombra: uma folha so para todos os carros (img/car/sombra), quadros menores, menos direcoes
+local SOMBRA_DIRECOES = Dados.sombra_direcoes
+Carro.SOMBRA_DESLOCA = (Dados.quadro - Dados.sombra_quadro) // 2 + 3   -- 3 px para a direita e para baixo
 
 function Carro.novo(def)
   local c = setmetatable({}, Carro)
@@ -41,7 +44,7 @@ function Carro.novo(def)
   c.acel, c.freio, c.turbo, c.volante = false, false, false, 0
   c.turbo_carga = 1
   c.nome, c.humano = def.nome, def.humano
-  c.img, c.img2, c.sombra, c.sombra2 = def.img, def.img2, def.sombra, def.sombra2   -- as 2 folhas de cada
+  c.img, c.img2 = def.img, def.img2   -- as 2 folhas de cada
   local medida = Dados[def.modelo] or { comprimento = 30, largura = 15 }
   c.comprimento, c.largura = medida.comprimento, medida.largura
   c.sonda_f, c.sonda_r = sondas(c.comprimento, c.largura)
@@ -233,6 +236,12 @@ function Carro:desencostar(m, n, pista)
 end
 
 -- folha (1 ou 2) e tile (com o espelho, +1024) da direcao atual
+function Carro:quadro_sombra()
+  local d = (self.ang * SOMBRA_DIRECOES / DOIS_PI + 0.5) // 1 % SOMBRA_DIRECOES
+  if d > SOMBRA_DIRECOES // 2 then return SOMBRA_DIRECOES - d + 1024 end
+  return d
+end
+
 function Carro:quadro()
   local d = (self.ang * DIRECOES / DOIS_PI + 0.5) // 1 % DIRECOES
   local espelho = 0

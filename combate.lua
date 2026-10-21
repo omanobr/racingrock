@@ -143,7 +143,9 @@ end
 
 local function pegar_item(self, c, it)
   local t = it.tipo
-  if t == "municao" then c.municao = c.municao + C.MUNICAO_ITEM
+  if t == "municao" then        -- no maximo o pente cheio (na v0.21 passava de 100%)
+    c.municao = c.municao + C.MUNICAO_ITEM
+    if c.municao > C.MUNICAO then c.municao = C.MUNICAO end
   elseif t == "turbo" then c.turbo_carga = 1
   elseif t == "dinheiro" then c.dinheiro = c.dinheiro + C.DINHEIRO_ITEM
   else c.vida = c.vida + C.CONSERTO; if c.vida > C.VIDA then c.vida = C.VIDA end end
