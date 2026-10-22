@@ -42,7 +42,7 @@ function Tela.nova()
   opcoes[#opcoes + 1] = { texto = "NOVO JOGO", acao = novo_jogo }
   opcoes[#opcoes + 1] = { texto = "PASSWORD", acao = function() Jogo.ir("senha") end }
   opcoes[#opcoes + 1] = { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end }
-  t.menu = Menu.novo(opcoes, 160, 110, 18, 160)
+  t.menu = Menu.novo(opcoes, 186, 112, 24, 150)
   return t
 end
 
@@ -56,15 +56,17 @@ function Tela:atualizar()
 end
 
 function Tela:desenhar()
-  ui.cls(Cores.cinza_escuro)
+  Menu.fundo()
   if self.intro then
-    Menu.cabecalho("RACING ROCK - A LIGA")
+    Menu.cabecalho("A LIGA")
+    Menu.painel(48, 34, 384, 218)
     for i, l in ipairs(HISTORIA) do Menu.centro(l, 28 + i * 12, Cores.branco) end
     Menu.rodape(Entrada.NOME.confirmar .. ": PARA A GARAGEM")
     return
   end
-  Menu.cabecalho("MODO HISTORIA")
-  Menu.centro("CAMPEONATO DA LIGA RACING ROCK", 60, Cores.amarelo)
+  Menu.cabecalho("MODO HISTÓRIA")
+  Menu.centro("CAMPEONATO DA LIGA RACING ROCK", 64, Cores.amarelo)
+  Menu.centro("20 PILOTOS, 1 RANKING, NENHUMA REGRA", 78, Cores.cinza)
   self.menu:desenhar()
   Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER   " .. Entrada.NOME.voltar .. ": VOLTAR")
 end

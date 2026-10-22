@@ -35,6 +35,11 @@ end
 function Corrida.nova(opcoes)
   local r = setmetatable({}, Corrida)
   r.pista = Pista.carregar(opcoes.pista or 1)
+  -- mapinha do painel (ferramentas/gerar_interface.py)
+  local mapa = require("dados_interface").mapas[r.pista.id]
+  if mapa and Sprites.img.mapa then
+    r.mapa = { img = Sprites.img.mapa[r.pista.id], escala = mapa.escala, w = mapa.w, h = mapa.h }
+  end
   r.voltas = opcoes.voltas or C.VOLTAS
   r.dificuldade = opcoes.dificuldade or "facil"
   r.campeonato = opcoes.campeonato
@@ -70,6 +75,7 @@ function Corrida.nova(opcoes)
       img = Sprites.img.car[m.id .. "_" .. CORES[i]], img2 = Sprites.img.car[m.id .. "_" .. CORES[i] .. "2"],
     })
     c.modelo = m
+    c.cor = CORES[i]
     c.nivel_blindagem = i == 1 and (mel.blindagem or 0) or (rival and rival.blindagem or 0)
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada

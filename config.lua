@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.25"
+C.VERSAO = "0.26"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -54,6 +54,7 @@ C.RESGATE_PARADO = 4    -- segundos sem sair do lugar (menos de 6 px por segundo
 --   mina: 20 x (1024 - blindagem); batida: (1024 - blindagem) x (velocidade em px/quadro)^2, ate 10000
 --   blindagem = base do carro (120 a 350) + nivel comprado (360 a 600) + 100 do jogador, ate 900
 C.VIDA = 100
+C.KMH = 0.7             -- velocimetro: km/h por px/s (fusca ~136, puma ~161, com turbo ~260)
 C.ARMA_ALCANCE = 170    -- px (130 no Death Rally, x ESCALA)
 C.ARMA_FATOR = { 0.2, 0.95 }       -- arma 1 a 5 da ficha (carros.lua): 0,2 + 0,15 x tipo (0 a 5)
 C.BLINDAGEM_BASE = { 120, 350 }    -- blindagem 1 a 5 da ficha

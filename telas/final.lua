@@ -2,6 +2,7 @@
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Menu = require "menu"
+local Texto = require "texto"
 
 local Tela = {}
 Tela.__index = Tela
@@ -37,8 +38,7 @@ end
 
 function Tela:desenhar()
   ui.cls(Cores.preto)
-  local pisca = (self.quadro // 20) % 2 == 0
-  Menu.centro("R A C I N G   R O C K", 30, pisca and Cores.amarelo or Cores.vermelho)
+  Texto.centro("f3", "CAMPE\xC3O!", 24, "amarelo")
   for i, l in ipairs(TEXTO) do Menu.centro(l, 56 + i * 13, Cores.branco) end
   Menu.centro(self.rodadas, 214, Cores.verde)
   if self.espera <= 0 then Menu.rodape(Entrada.NOME.confirmar .. ": FIM") end

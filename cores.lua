@@ -13,6 +13,10 @@ local Cores = {
   amarelo = hex(0xEFC629),
   laranja = hex(0xEF7B10),
   verde = hex(0x52DE52),
+  fundo = hex(0x181818),           -- fundo dos menus
+  vinho = hex(0x6B1010),           -- faixa da opcao escolhida
+  amarelo_escuro = hex(0xBD9410),
+  azul_claro = hex(0x8CB5FF),
 }
 
 return Cores

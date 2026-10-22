@@ -3,6 +3,8 @@
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Campeonato = require "campeonato"
+local Menu = require "menu"
+local Texto = require "texto"
 
 local Tela = {}
 Tela.__index = Tela
@@ -20,11 +22,15 @@ function Tela.nova(corrida)
   for i, c in ipairs(corrida.classificacao) do
     local situacao = c.chegou and tempo(c.chegou) or (c.destruido and "DESTRUIDO" or "NAO CHEGOU")
     t.linhas[i] = {
-      texto = string.format("%do  %-10s  %-10s  ABATES %d  MELHOR VOLTA %s", i, c.nome, situacao, c.abates,
+      pos = string.format("%d\xBA", i),
+      texto = string.format("%-10s  %-10s  ABATES %d  MELHOR VOLTA %s", c.nome, situacao, c.abates,
         tempo(c.melhor_volta)),
       cor = c == corrida.jogador and Cores.amarelo or (c.destruido and Cores.cinza or Cores.branco),
+      jogador = c == corrida.jogador,
     }
   end
+  local j = corrida.jogador
+  t.titulo = j.destruido and "DESTRU\xCDDO!" or (j.posicao == 1 and "VIT\xD3RIA!" or string.format("%d\xBA LUGAR", j.posicao))
   t.premios = {}
   for i, p in ipairs(premios) do t.premios[i] = { string.format("%-24s $%6d", p[1], p[2]), Cores.branco } end
   t.total = string.format("%-24s $%6d", "TOTAL", total)
@@ -37,7 +43,7 @@ function Tela.nova(corrida)
     t.total = string.format("%-24s $%6d", "VOCE TEM AGORA", e.dinheiro)
     local depois = Campeonato.posicao(e)
     t.ranking = string.format("PONTOS NO RANKING: +%d   (%do -> %do LUGAR)", res.pontos, antes, depois)
-    t.senha = "PASSWORD: " .. Campeonato.senha_bonita(e)
+    t.senha = Campeonato.senha_bonita(e)
     t.final = res.venceu_final
     t.historia = true
   end
@@ -54,19 +60,29 @@ function Tela:atualizar()
 end
 
 function Tela:desenhar()
-  ui.cls(Cores.cinza_escuro)
-  ui.print("RESULTADO", 213, 20, Cores.amarelo)
-  for i, l in ipairs(self.linhas) do ui.print(l.texto, 40, 30 + i * 13, l.cor) end
-  ui.print("SEU DINHEIRO", 60, 102, Cores.amarelo)
-  for i, p in ipairs(self.premios) do ui.print(p[1], 60, 104 + i * 11, p[2]) end
-  local y = 118 + #self.premios * 11
+  Menu.fundo()
+  Menu.cabecalho(self.titulo)
+  -- ordem de chegada
+  Menu.painel(16, 34, 448, 6 + 18 * #self.linhas)
+  for i, l in ipairs(self.linhas) do
+    local y = 37 + (i - 1) * 18
+    if l.jogador then ui.rectfill(17, y - 1, 462, y + 16, Cores.vinho) end
+    Texto.escrever("f2", l.pos, 24, y, l.jogador and "amarelo" or "branco")
+    ui.print(l.texto, 70, y + 4, l.cor)
+  end
+  -- dinheiro
+  local y0 = 46 + 18 * #self.linhas
+  ui.print("SEU DINHEIRO", 60, y0, Cores.amarelo)
+  for i, p in ipairs(self.premios) do ui.print(p[1], 60, y0 + 2 + i * 10, p[2]) end
+  local y = y0 + 14 + #self.premios * 10
   ui.print(self.total, 60, y, Cores.verde)
   if self.ranking then
-    ui.print(self.ranking, 60, y + 16, Cores.amarelo)
-    ui.rectfill(0, 214, 479, 233, Cores.preto)
-    ui.print(self.senha, 240 - #self.senha * 3, 220, Cores.verde)
+    ui.print(self.ranking, 60, y + 13, Cores.amarelo)
+    Menu.painel(70, 214, 340, 31, Cores.amarelo_escuro)
+    ui.print("PASSWORD:", 82, 226, Cores.cinza_claro)
+    Texto.escrever("f3", self.senha, 150, 218, "amarelo")
   end
-  ui.print(Entrada.NOME.confirmar .. ": CONTINUAR", 186, 250, Cores.cinza_claro)
+  Menu.rodape(Entrada.NOME.confirmar .. ": CONTINUAR")
 end
 
 return Tela

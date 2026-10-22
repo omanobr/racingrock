@@ -7,11 +7,11 @@ local Tela = {}
 Tela.__index = Tela
 
 local menu = Menu.novo({
-  { texto = "FPS NO RODAPE", acao = function() Jogo.rodape = not Jogo.rodape end,
-    valor = function() return Jogo.rodape and "SIM" or "NAO" end },
-  { texto = "TESTE DE BOTOES", acao = function() Jogo.ir("teste") end },
+  { texto = "FPS NO RODAPÉ", acao = function() Jogo.rodape = not Jogo.rodape end,
+    valor = function() return Jogo.rodape and "SIM" or "NÃO" end },
+  { texto = "TESTE DE BOTÕES", acao = function() Jogo.ir("teste") end },
   { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end },
-}, 140, 100, 18, 220)
+}, 150, 100, 24, 230)
 
 function Tela.nova()
   return setmetatable({}, Tela)
@@ -23,8 +23,8 @@ function Tela:atualizar()
 end
 
 function Tela:desenhar()
-  ui.cls(Cores.cinza_escuro)
-  Menu.cabecalho("OPCOES")
+  Menu.fundo()
+  Menu.cabecalho("OPÇÕES")
   menu:desenhar()
   Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER   " .. Entrada.NOME.voltar .. ": VOLTAR")
 end

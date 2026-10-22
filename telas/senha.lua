@@ -5,6 +5,7 @@ local Entrada = require "entrada"
 local Cores = require "cores"
 local Menu = require "menu"
 local Campeonato = require "campeonato"
+local Texto = require "texto"
 
 local Tela = {}
 Tela.__index = Tela
@@ -59,20 +60,21 @@ function Tela:atualizar()
 end
 
 function Tela:desenhar()
-  ui.cls(Cores.cinza_escuro)
+  Menu.fundo()
   Menu.cabecalho("PASSWORD")
   Menu.centro("DIGITE O PASSWORD QUE VOCE ANOTOU", 60, Cores.cinza_claro)
-  -- 8 casas de 24 px, com um espaco no meio (ABCD EFGH)
-  local x0 = 240 - (8 * 26 + 12) // 2
+  -- 8 casas de 27 px, com um espaco no meio (ABCD EFGH)
+  local x0 = 240 - (8 * 31 + 14) // 2
   for i = 1, 8 do
-    local x = x0 + (i - 1) * 26 + (i > 4 and 12 or 0)
-    local cor = i == self.casa and Cores.vermelho or Cores.preto
-    ui.rectfill(x, 100, x + 21, 125, cor)
+    local x = x0 + (i - 1) * 31 + (i > 4 and 14 or 0)
+    local aqui = i == self.casa
+    Menu.painel(x, 96, 27, 33, aqui and Cores.amarelo or Cores.cinza_escuro)
+    if aqui then ui.rectfill(x + 1, 97, x + 25, 127, Cores.vinho) end
     local k = self.letras[i]
-    ui.print(ALFA:sub(k, k), x + 8, 109, Cores.branco)
-    if i == self.casa then
-      ui.print("^", x + 8, 90, Cores.amarelo)
-      ui.print("v", x + 8, 130, Cores.amarelo)
+    Texto.escrever("f3", ALFA:sub(k, k), x + 5, 101, "amarelo")
+    if aqui then
+      ui.print("^", x + 11, 86, Cores.amarelo)
+      ui.print("v", x + 11, 133, Cores.amarelo)
     end
   end
   if self.aviso_t > 0 then Menu.centro(self.aviso, 160, Cores.vermelho) end

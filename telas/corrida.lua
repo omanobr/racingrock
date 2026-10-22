@@ -7,6 +7,7 @@ local Tempo = require "tempo"
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Carro = require "carro"
+local Texto = require "texto"
 
 local Tela = {}
 Tela.__index = Tela
@@ -79,9 +80,11 @@ function Tela:desenhar()
 
   Hud.desenhar(r)
   if self.pausa then
-    ui.rectfill(170, 110, 309, 149, Cores.preto)
-    ui.print("PAUSA", 225, 116, Cores.amarelo)
-    ui.print(Entrada.NOME.pausa .. " CONTINUA  " .. Entrada.NOME.voltar .. " SAI", 180, 132, Cores.branco)
+    ui.rectfill(164, 104, 315, 155, Cores.amarelo_escuro)
+    ui.rectfill(165, 105, 314, 154, Cores.preto)
+    Texto.centro("f3", "PAUSA", 110, "amarelo")
+    local s = Entrada.NOME.pausa .. " CONTINUA  " .. Entrada.NOME.voltar .. " SAI"
+    ui.print(s, 240 - #s * 3, 140, Cores.branco)
   end
 end
 
