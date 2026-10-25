@@ -69,6 +69,14 @@ function Menu.fundo()
   ui.cls(Cores.fundo)
 end
 
+-- fundo com uma das telas cheias da arte (ferramentas/preparar_interface.py): img/tela/<nome>1..3,
+-- faixas de 480x90 (uma imagem de 480x270 passaria do limite de bytes do console)
+local FAIXA_H = require("dados_telas").faixa_h
+function Menu.imagem(nome)
+  local t = Sprites.img.tela
+  for k = 1, 3 do ui.spr(t[nome .. k], 0, (k - 1) * FAIXA_H) end
+end
+
 -- painel: caixa preta com borda
 function Menu.painel(x, y, w, h, borda)
   ui.rectfill(x, y, x + w - 1, y + h - 1, borda or Cores.cinza_escuro)

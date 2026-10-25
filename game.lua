@@ -35,8 +35,8 @@ function Jogo.ir(nome, ...)
 end
 
 if DEV.cena == "corrida" then
-  Jogo.ir("corrida", { pista = DEV.pista or 1, voltas = DEV.voltas or C.VOLTAS, autopiloto = DEV.autopiloto,
-                       modelo = DEV.modelo })
+  Jogo.ir("corrida", { pista = DEV.pista or 1, variante = DEV.variante, voltas = DEV.voltas or C.VOLTAS,
+                       autopiloto = DEV.autopiloto, modelo = DEV.modelo })
 else
   Jogo.ir("titulo")
 end

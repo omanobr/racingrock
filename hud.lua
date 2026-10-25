@@ -107,7 +107,7 @@ function Hud.desenhar(corrida)
   local v = j.v > 0 and j.v or -j.v
   numero_dir(pn, (v * C.KMH) // 1, 410, 222)
   -- mapinha
-  if m then ui.spr(m.img, mx, 6) end
+  if m then tile(m.img, m.espelho and 1024 or 0, mx, 6) end   -- folha de 1 tile (espelha)
   -- icones: conserto, municao, minas
   tile(efx, Efx.conserto[1], 8, 221)
   tile(efx, Efx.municao[1], 8, 236)
@@ -149,6 +149,7 @@ function Hud.desenhar(corrida)
       local c = carros[i]
       if not c.destruido then
         local px, py = mx + 1 + (c.x * esc) // 1, 7 + (c.y * esc) // 1
+        if m.espelho then px = mx + m.w - 2 - ((m.largura - c.x) * esc) // 1 end
         if c == j then
           rectfill(px - 2, py - 2, px + 2, py + 2, Cores.preto)
           rectfill(px - 1, py - 1, px + 1, py + 1, (corrida.quadros // 8) % 2 == 0 and Cores.branco or Cores.vermelho)

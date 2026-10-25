@@ -152,7 +152,8 @@ local function carro_na_corrida(i, rodada, faixa)
   return Carros[k].id
 end
 
--- as 3 corridas da rodada: { dificuldade, pista (indice no menu), rivais = { indices dos rivais },
+-- as 3 corridas da rodada: { dificuldade, pista (indice no menu), variante (Pista.VARIANTES: a
+-- pista inversa e/ou espelhada; a 1a rodada e normal), rivais = { indices dos rivais },
 -- carros = { modelo de cada rival } }
 function Campeonato.corridas(e)
   local rank = Campeonato.ranking(e)
@@ -171,10 +172,11 @@ function Campeonato.corridas(e)
       escolhidos[k] = table.remove(candidatos, j)
     end
     local pista = ps[sorteio(e.rodada, d + 10) % #ps + 1]
-    if e.rodada == 0 then pista = PRIMEIRA_RODADA[d] end
+    local variante = sorteio(e.rodada, d + 30) % 4 + 1
+    if e.rodada == 0 then pista, variante = PRIMEIRA_RODADA[d], 1 end
     local carros = {}
     for k, i in ipairs(escolhidos) do carros[k] = carro_na_corrida(i, e.rodada, dif.carros) end
-    lista[d] = { dificuldade = dif, pista = pista, rivais = escolhidos, carros = carros }
+    lista[d] = { dificuldade = dif, pista = pista, variante = variante, rivais = escolhidos, carros = carros }
   end
   return lista
 end
@@ -211,7 +213,7 @@ function Campeonato.opcoes_da_corrida(e, corrida, minas)
   local primeiro = sorteio(e.rodada, 77) % #rivais
   for k = 0, com_minas - 1 do rivais[(primeiro + k) % #rivais + 1].minas = C.MINAS end
   return {
-    pista = corrida.pista, voltas = Pista.LISTA[corrida.pista].voltas,
+    pista = corrida.pista, variante = corrida.variante, voltas = Pista.LISTA[corrida.pista].voltas,
     modelo = Campeonato.modelo(e).id, rivais = rivais, nivel = e.nivel or 2,
     minas = minas and C.MINAS or 0, preco_minas = minas and C.PRECO_MINAS or 0,
     melhorias = { motor = e.motor, pneus = e.pneus, blindagem = e.blindagem },

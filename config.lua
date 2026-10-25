@@ -2,11 +2,12 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.27"
+C.VERSAO = "0.28"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
 C.PISTA = 2             -- pista do comeco (pista.lua; o menu troca)
+C.VARIANTE = 1          -- 1 normal, 2 inversa, 3 espelhada, 4 espelhada e inversa (Pista.VARIANTES)
 C.MODELO = "fusca"      -- carro do jogador no comeco (carros.lua; o menu troca)
 
 -- Carro. M e a "potencia" do Death Rally (2.55 no carro mais fraco, 4.3 no mais forte).

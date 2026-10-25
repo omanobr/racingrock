@@ -29,7 +29,7 @@ local function modelos(do_jogador)
   return outros
 end
 
--- opcoes: { pista = n, voltas = n, autopiloto = bool, modelo = id do carro do jogador,
+-- opcoes: { pista = n, variante = n (Pista.VARIANTES), voltas = n, autopiloto = bool, modelo = id do carro do jogador,
 --   nivel = 1..3 (C.NIVEIS: o computador), minas = do jogador, minas_rivais = de cada rival,
 --   e no modo historia (campeonato.lua): rivais = { { nome, modelo, fator, blindagem, minas }, ... },
 --   melhorias = { motor, pneus, blindagem } do jogador, dificuldade = "facil"..., campeonato }
@@ -37,12 +37,13 @@ end
 -- historia o jogador compra antes da corrida.
 function Corrida.nova(opcoes)
   local r = setmetatable({}, Corrida)
-  r.pista = Pista.carregar(opcoes.pista or 1)
+  r.pista = Pista.carregar(opcoes.pista or 1, opcoes.variante)
   IA.pista(r.pista)
   -- mapinha do painel (ferramentas/gerar_interface.py)
   local mapa = require("dados_interface").mapas[r.pista.id]
   if mapa and Sprites.img.mapa then
-    r.mapa = { img = Sprites.img.mapa[r.pista.id], escala = mapa.escala, w = mapa.w, h = mapa.h }
+    r.mapa = { img = Sprites.img.mapa[r.pista.id], escala = mapa.escala, w = mapa.w, h = mapa.h,
+               espelho = r.pista.espelho, largura = r.pista.largura }
   end
   r.voltas = opcoes.voltas or C.VOLTAS
   r.nivel = C.NIVEIS[opcoes.nivel or C.NIVEL] or C.NIVEIS[2]

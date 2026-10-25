@@ -41,10 +41,11 @@ function Tela.carro(m, cx, y_chao)
   ui.spr(Sprites.img.car[m.id .. "_3q"], cx - t[1] // 2, y_chao - t[2])
 end
 
--- mapinha de uma pista (img/mapa/<id>) centralizado em cx, com o topo em y
-function Tela.mapa(id, cx, y)
+-- mapinha de uma pista (img/mapa/<id>, folha de 1 tile) centralizado em cx, com o topo em y;
+-- espelho: da pista espelhada
+function Tela.mapa(id, cx, y, espelho)
   local d = D.mapas[id]
-  if d then ui.spr(Sprites.img.mapa[id], cx - d.w // 2, y) end
+  if d then ui.tile(Sprites.img.mapa[id], espelho and 1024 or 0, cx - d.w // 2, y) end
 end
 
 local minas = false     -- todos levam um pacote de minas?
@@ -52,15 +53,16 @@ local minas = false     -- todos levam um pacote de minas?
 local menu = Menu.novo({
   { texto = "CORRER", acao = function()
     local n = minas and C.MINAS or 0
-    Jogo.ir("corrida", { pista = C.PISTA, voltas = Pista.LISTA[C.PISTA].voltas, nivel = C.NIVEL, minas = n,
-                         minas_rivais = n })
+    Jogo.ir("corrida", { pista = C.PISTA, variante = C.VARIANTE, voltas = Pista.LISTA[C.PISTA].voltas,
+                         nivel = C.NIVEL, minas = n, minas_rivais = n })
   end },
   { texto = "PISTA", acao = function() C.PISTA = C.PISTA % Pista.quantas() + 1 end },
+  { texto = "VARIA\xC7\xC3O", acao = function() C.VARIANTE = C.VARIANTE % #Pista.VARIANTES + 1 end },
   { texto = "CARRO", acao = function() C.MODELO = Carros[Carros.indice(C.MODELO) % #Carros + 1].id end },
   { texto = "N\xCDVEL", acao = function() C.NIVEL = C.NIVEL % #C.NIVEIS + 1 end },
   { texto = "MINAS", acao = function() minas = not minas end },
   { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end },
-}, 52, 56, 24, 150)
+}, 52, 48, 22, 150)
 
 function Tela.nova()
   return setmetatable({}, Tela)
@@ -80,8 +82,10 @@ function Tela:desenhar()
   Menu.painel(196, 36, 272, 92)
   ui.print("PISTA", 204, 42, Cores.cinza)
   ui.print(p.nome, 204, 54, Cores.branco)
-  ui.print(p.voltas .. " VOLTAS", 204, 66, Cores.cinza_claro)
-  Tela.mapa(p.id, 400, 44)
+  local v = Pista.VARIANTES[C.VARIANTE]
+  ui.print(v.nome ~= "" and v.nome or "NORMAL", 204, 66, Cores.amarelo)
+  ui.print(p.voltas .. " VOLTAS", 204, 78, Cores.cinza_claro)
+  Tela.mapa(p.id, 400, 44, v.espelho)
   -- carro
   local m = Carros[Carros.indice(C.MODELO)]
   Menu.painel(196, 134, 272, 110)

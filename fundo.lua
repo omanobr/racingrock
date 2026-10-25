@@ -6,6 +6,9 @@
 -- com os tiles de 16x16 da v0.21 eram ~510, e o fundo era ~45% das instrucoes da corrida. A
 -- pista de treino continua em tiles de 16x16 (p.mapa).
 --
+-- Pista espelhada (v0.28, pista.lua): a coluna c da tela e a coluna (colunas - 1 - c) da imagem,
+-- desenhada com o tile espelhado (+1024). As mesmas folhas, nenhum arquivo novo.
+--
 -- O console NAO sabe desenhar imagem cortada pela borda da esquerda ou da direita da tela
 -- (v0.11, teste de bordas no aparelho): o pedaco sai no lugar errado, o resto da lista de
 -- desenho pode sumir e, com muitos pedacos assim (ui.map em blocos), o chip de video se perde
@@ -39,6 +42,11 @@ local function tiras(p, camx, camy)
   if c1 >= p.colunas then c1 = p.colunas - 1 end
   if r1 >= p.linhas then r1 = p.linhas - 1 end
   local regioes = p.regioes
+  local espelho = p.espelho
+  if espelho then
+    local C = p.colunas
+    c0, c1 = C - 1 - c1, C - 1 - c0       -- colunas da imagem que aparecem na tela
+  end
   for ry = r0 // RT, r1 // RT do
     local linha = regioes[ry + 1]
     local ta, tb = ry * RT, ry * RT + RT - 1        -- linhas de tiras desta regiao na tela
@@ -51,12 +59,23 @@ local function tiras(p, camx, camy)
       local ca, cb = base, base + RW - 1
       if ca < c0 then ca = c0 end
       if cb > c1 then cb = c1 end
-      local xa = ca * TS - camx
-      for t = ta, tb do
-        local nums, x, y = r[t - ry * RT + 2], xa, t * TH - camy
-        for k = ca - base + 1, cb - base + 1 do
-          tile(img, nums[k], x, y)
-          x = x + TS
+      if espelho then
+        local xa = (p.colunas - 1 - ca) * TS - camx
+        for t = ta, tb do
+          local nums, x, y = r[t - ry * RT + 2], xa, t * TH - camy
+          for k = ca - base + 1, cb - base + 1 do
+            tile(img, nums[k] + 1024, x, y)
+            x = x - TS
+          end
+        end
+      else
+        local xa = ca * TS - camx
+        for t = ta, tb do
+          local nums, x, y = r[t - ry * RT + 2], xa, t * TH - camy
+          for k = ca - base + 1, cb - base + 1 do
+            tile(img, nums[k], x, y)
+            x = x + TS
+          end
         end
       end
     end
@@ -76,6 +95,8 @@ function Fundo.desenhar(p, camx, camy)
   if r1 >= p.linhas then r1 = p.linhas - 1 end
   local mapa = p.mapa
   local RW, RH = p.regiao_w, p.regiao_h
+  local espelho, C = p.espelho, p.colunas
+  if espelho then c0, c1 = C - 1 - c1, C - 1 - c0 end
   local ry = r0 - r0 % RH
   while ry <= r1 do
     local ra, rb = ry < r0 and r0 or ry, ry + RH - 1
@@ -85,12 +106,14 @@ function Fundo.desenhar(p, camx, camy)
       local ca, cb = rx < c0 and c0 or rx, rx + RW - 1
       if cb > c1 then cb = c1 end
       local img = imagens[mapa[ra + 1][ca + 1] >> 11]
-      local y, xa = ra * TS - camy, ca * TS - camx
+      local y = ra * TS - camy
+      local xa, passo, vira = ca * TS - camx, TS, 0
+      if espelho then xa, passo, vira = (C - 1 - ca) * TS - camx, -TS, 1024 end
       for r = ra + 1, rb + 1 do
         local linha, x = mapa[r], xa
         for c = ca + 1, cb + 1 do
-          tile(img, linha[c] & 2047, x, y)
-          x = x + TS
+          tile(img, (linha[c] & 2047) ~ vira, x, y)
+          x = x + passo
         end
         y = y + TS
       end
