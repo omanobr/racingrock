@@ -164,6 +164,7 @@ end
 
 function Combate:atualizar(dt)
   local carros = self.corrida.carros
+  local liberadas = self.corrida.tempo > C.ARMAS_INICIO   -- armas travadas na largada (todos)
   for _, c in ipairs(carros) do
     if not c.destruido then
       -- batidas (carro.lua e corrida.lua anotam a velocidade da batida)
@@ -182,8 +183,8 @@ function Combate:atualizar(dt)
         self:efeito("faisca", c.x + sin(c.ang) * f, c.y - cos(c.ang) * f)
       end
       c.tiro_x = nil
-      if c.atirando and c.municao > 0 and not c.destruido then atirar(self, c, dt) end
-      if c.soltar_mina and c.minas > 0 and not c.destruido then soltar_mina(self, c) end
+      if liberadas and c.atirando and c.municao > 0 and not c.destruido then atirar(self, c, dt) end
+      if liberadas and c.soltar_mina and c.minas > 0 and not c.destruido then soltar_mina(self, c) end
       -- fumaca de carro muito batido
       if c.vida < C.FUMACA_VIDA and not c.destruido then
         c.fumaca = c.fumaca - dt

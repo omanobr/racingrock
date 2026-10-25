@@ -13,6 +13,7 @@ local Rapida = require "telas.rapida"
 local Texto = require "texto"
 local C = require "config"
 local DT = require "dados_telas"
+local Lote = require "lote"
 
 local Tela = {}
 Tela.__index = Tela
@@ -252,7 +253,7 @@ function Tela:atualizar()
 end
 
 -- ---------------------------------------------------------------- desenho
-local function retrato16(n, x, y) ui.tile(Sprites.img.ui.ret16, n, x, y) end
+local function retrato16(n, x, y) Lote.tile(Sprites.img.ui.ret16, n, x, y) end
 
 -- opcao de menu solta (como em menu.lua), para as opcoes embaixo dos cartazes
 local function opcao(texto, x, y, largura, escolhida)
@@ -356,7 +357,7 @@ function Tela:desenhar_oficina()
   local O = DT.oficina
   for k, qual in ipairs(Campeonato.MELHORIAS) do
     local y = 66 + (k - 1) * 50
-    ui.tile(Sprites.img.ui.oficina, O[qual], 22, y - 14)
+    Lote.tile(Sprites.img.ui.oficina, O[qual], 22, y - 14)
     ui.print(EXPLICA_MELHORIA[qual], 84, y + 14, Cores.cinza)
   end
   Menu.painel(320, 32, 152, 30)
@@ -426,10 +427,11 @@ end
 -- proposta de recompensa, por cima dos cartazes
 function Tela:desenhar_proposta()
   self:desenhar_corridas()
+  Lote.desenhar()   -- os cartazes ficam embaixo da janela
   local p = self.proposta
   Menu.painel(52, 52, 376, 172, Cores.vermelho)
   Texto.escrever("f2", "PROPOSTA", 68, 64, "amarelo")
-  ui.tile(Sprites.img.ui.ret36, self.corrida_escolhida.rivais[p.alvo] - 1, 68, 90)
+  Lote.tile(Sprites.img.ui.ret36, self.corrida_escolhida.rivais[p.alvo] - 1, 68, 90)
   ui.print("UM APOSTADOR QUER VER O CARRO DE", 116, 92, Cores.branco)
   ui.print(p.nome .. " FORA DESTA CORRIDA.", 116, 104, Cores.branco)
   ui.print("DESTRUA O CARRO (O ABATE TEM DE SER SEU)", 116, 122, Cores.branco)
@@ -456,7 +458,7 @@ function Tela:desenhar_mercado()
   Menu.imagem("mercado")
   Menu.painel(8, 32, 296, 194)
   local itens = Sprites.img.ui.itens
-  for k, chave in ipairs(ICONE_MERCADO) do ui.tile(itens, DT.itens[chave], 14, 32 + (k - 1) * 34) end
+  for k, chave in ipairs(ICONE_MERCADO) do Lote.tile(itens, DT.itens[chave], 14, 32 + (k - 1) * 34) end
   self.menu_mercado:desenhar()
   Menu.painel(8, 228, 464, 27)
   local o = self.menu_mercado:atual()
@@ -516,6 +518,7 @@ function Tela:desenhar()
   else self:desenhar_ranking() end
   Menu.cabecalho(TITULOS[modo], "RODADA " .. (self.e.rodada + 1) .. (modo == "menu" and "  " .. self.nivel or ""))
   if self.aviso_t > 0 then
+    Lote.desenhar()   -- o aviso fica por cima do password
     local w = #self.aviso * 6
     ui.rectfill(240 - w // 2 - 6, 241, 240 + w // 2 + 5, 254, Cores.vinho)
     Menu.centro(self.aviso, 244, Cores.branco)

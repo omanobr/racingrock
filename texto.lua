@@ -5,10 +5,11 @@
 -- simulador em UTF-8 (2 bytes); os dois jeitos funcionam, sem utf8.* (que quebra no console).
 -- O texto pequeno continua com ui.print (so ASCII).
 local D = require "dados_interface"
+local Lote = require "lote"
 
 local Texto = {}
 
-local byte, tile = string.byte, ui.tile
+local byte, tile = string.byte, Lote.tile   -- nos menus, as letras vao para o lote (lote.lua)
 
 -- letra que comeca na posicao i de s: codigo (Latin-1/Latin-9, iguais nas letras do portugues)
 -- e a posicao da proxima

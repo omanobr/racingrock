@@ -7,6 +7,7 @@ local Campeonato = require "campeonato"
 local Menu = require "menu"
 local Texto = require "texto"
 local DT = require "dados_telas"
+local Lote = require "lote"
 
 local Tela = {}
 Tela.__index = Tela
@@ -88,7 +89,7 @@ function Tela:desenhar()
     local y = 37 + (i - 1) * 18
     if l.jogador then ui.rectfill(17, y - 1, 462, y + 16, Cores.vinho) end
     Texto.escrever("f2", l.pos, 24, y, l.jogador and "amarelo" or "branco")
-    if l.retrato then ui.tile(Sprites.img.ui.ret16, l.retrato, 62, y) end
+    if l.retrato then Lote.tile(Sprites.img.ui.ret16, l.retrato, 62, y) end
     ui.print(l.texto, 84, y + 4, l.cor)
   end
   -- dinheiro

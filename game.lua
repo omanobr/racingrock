@@ -12,6 +12,7 @@ DEV = (ok and type(dev) == "table") and dev or {}
 local C = require "config"
 local Tempo = require "tempo"
 local Diag = require "diagnostico"
+local Lote = require "lote"
 
 local TELAS = {
   titulo = require "telas.titulo",
@@ -94,7 +95,15 @@ function update(frame)
   if anda then
     for _ = 1, DEV.turbo or 1 do Jogo.tela:atualizar() end
   end
+  -- fora da corrida, os tiles de cada folha saem juntos no fim (lote.lua: cada troca de folha
+  -- le a folha inteira do cartao)
+  local lote = Jogo.nome_tela ~= "corrida"
+  Lote.ligar(lote)
   Jogo.tela:desenhar()
+  if lote then
+    Lote.desenhar()
+    Lote.ligar(false)
+  end
 
   if Medidor then
     Medidor.fim()

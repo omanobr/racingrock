@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.33"
+C.VERSAO = "0.34"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -131,7 +131,8 @@ C.FUMACA_VIDA = 40      -- abaixo disso o carro solta fumaca
 C.FAISCA_VEL = 60       -- raspando no muro mais rapido que isso (px/s), solta faiscas
 C.EFEITO_DURA = { explosao = 0.4, explosao_grande = 0.9, faisca = 0.15, fumaca = 0.8 }
 C.IA_MINA_ESPERA = 5    -- segundos entre uma mina e outra do computador
-C.IA_TIRO_INICIO = 4    -- o computador nao atira nos primeiros segundos (todos colados na largada)
+C.ARMAS_INICIO = 4      -- ninguem atira nem solta mina nos primeiros segundos (todos colados na largada;
+                        -- ate a v0.33 so o computador esperava)
 C.IA_RAJADA = { 0.5, 1.0 }   -- o computador atira em rajadas de 0,5 a 1 s...
 C.IA_PAUSA = { 0.6, 1.6 }    -- ...com pausas de 0,6 a 1,6 s
 -- e mira com um erro sorteado a cada rajada, ate o "mira" do nivel (C.NIVEIS)

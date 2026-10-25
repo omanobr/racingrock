@@ -155,7 +155,7 @@ function IA.combate(c, corrida, dt)
   local N = c.nivel
   c.atirando = false
   c.rajada, c.pausa = (c.rajada or 0) - dt, (c.pausa or 0) - dt
-  if atira and c.municao > 0 and corrida.tempo > C.IA_TIRO_INICIO then
+  if atira and c.municao > 0 and corrida.tempo > C.ARMAS_INICIO then
     if c.rajada > 0 then
       c.atirando = true
     elseif c.pausa <= 0 then

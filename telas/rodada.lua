@@ -7,6 +7,7 @@ local Menu = require "menu"
 local Carros = require "carros"
 local Campeonato = require "campeonato"
 local DT = require "dados_telas"
+local Lote = require "lote"
 
 local Tela = {}
 Tela.__index = Tela
@@ -78,27 +79,36 @@ function Tela:atualizar()
   end
 end
 
+-- uma linha do ranking, a fracao f do caminho entre a posicao de antes e a de agora
+local function linha(l, f)
+  local x0, y0 = lugar(l.de)
+  local x1, y1 = lugar(l.para)
+  local x, y = (x0 + (x1 - x0) * f) // 1, (y0 + (y1 - y0) * f) // 1
+  local pos = f < 1 and l.de or l.para
+  local pontos = (l.pontos_de + (l.pontos - l.pontos_de) * f + 0.5) // 1
+  if l.jogador then ui.rectfill(x - 26, y - 5, x + 187, y + 12, Cores.vinho) end
+  Lote.tile(Sprites.img.ui.ret16, l.retrato, x - 22, y - 4)
+  local cor = l.jogador and Cores.amarelo or Cores.branco
+  ui.print(string.format("%2d. %-10s %-7s %3d", pos, l.nome, l.carro, pontos), x, y, cor)
+  if f >= 1 and l.para ~= l.de then
+    local sobe = l.para < l.de
+    ui.print((sobe and "+" or "-") .. math.abs(l.de - l.para), x + 168, y, sobe and Cores.verde or Cores.vermelho)
+  end
+end
+
 function Tela:desenhar()
   Menu.fundo()
   Menu.cabecalho("RANKING", self.titulo:match("RODADA %d+"))
   local f = (self.q - ESPERA) / ANDA
   if f < 0 then f = 0 elseif f > 1 then f = 1 end
   f = f * f * (3 - 2 * f)   -- suave no comeco e no fim
-  local ret = Sprites.img.ui.ret16
+  local eu
   for _, l in ipairs(self.linhas) do
-    local x0, y0 = lugar(l.de)
-    local x1, y1 = lugar(l.para)
-    local x, y = (x0 + (x1 - x0) * f) // 1, (y0 + (y1 - y0) * f) // 1
-    local pos = f < 1 and l.de or l.para
-    local pontos = (l.pontos_de + (l.pontos - l.pontos_de) * f + 0.5) // 1
-    if l.jogador then ui.rectfill(x - 26, y - 5, x + 187, y + 12, Cores.vinho) end
-    ui.tile(ret, l.retrato, x - 22, y - 4)
-    local cor = l.jogador and Cores.amarelo or Cores.branco
-    ui.print(string.format("%2d. %-10s %-7s %3d", pos, l.nome, l.carro, pontos), x, y, cor)
-    if f >= 1 and l.para ~= l.de then
-      local sobe = l.para < l.de
-      ui.print((sobe and "+" or "-") .. math.abs(l.de - l.para), x + 168, y, sobe and Cores.verde or Cores.vermelho)
-    end
+    if l.jogador then eu = l else linha(l, f) end
+  end
+  if eu then
+    Lote.desenhar()   -- a sua linha passa por cima das outras quando elas trocam de lugar
+    linha(eu, f)
   end
   -- noticias da liga
   Menu.painel(12, 220, 456, 36, Cores.amarelo_escuro)

@@ -114,12 +114,13 @@ function Hud.desenhar(corrida)
   for k = 1, j.minas do tile(efx, Efx.mina[1], 8 + (k - 1) * 16, 251) end
   -- barras (o tile tem 140 px de largura, mesmo nas de 100: o tile inteiro tem de caber na
   -- tela), as mascaras e o contorno da rampa do velocimetro, que a mascara apaga
+  local travadas = corrida.tempo <= C.ARMAS_INICIO   -- armas travadas na largada: sem a barra
   tile(barras, B.vida, 28, 226)
-  tile(barras, B.municao, 28, 241)
+  if not travadas then tile(barras, B.municao, 28, 241) end
   tile(barras, B.turbo, 330, 257)
   tile(barras, B.velocidade, 330, 239)
   mascara(28, 226, j.vida / C.VIDA)
-  mascara(28, 241, j.municao / C.MUNICAO)
+  if not travadas then mascara(28, 241, j.municao / C.MUNICAO) end
   mascara(330, 257, j.turbo_carga)
   local f = v / j.vmax
   local acesos
@@ -173,6 +174,10 @@ function Hud.desenhar(corrida)
     if c.destruido then print_("X", 92, y, Cores.vermelho) end
   end
   if j.dinheiro > 0 then print_(texto("dinheiro", j.dinheiro, "$%d", j.dinheiro), 64, 256, Cores.verde) end
+  if travadas then
+    local k = (C.ARMAS_INICIO - corrida.tempo + 0.999) // 1
+    print_(texto("armas", k, "ARMAS EM %d", k), 30, 241, Cores.cinza_claro)
+  end
   print_("KM/H", 414, 230, Cores.cinza)
   print_("TURBO", 436, 257, j.turbo and j.turbo_carga > 0 and Cores.azul_claro or Cores.cinza)
 

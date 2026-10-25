@@ -52,15 +52,18 @@ end
 -- titulo de tela: faixa preta com a zebrada amarela e o titulo grande no meio (y 0 a 27)
 function Menu.cabecalho(texto, direita)
   ui.rectfill(0, 0, 479, 27, Cores.preto)
-  for x = 0, 468, 12 do Texto.extra("zebrada", x, 6) end
+  -- faixa zebrada, menos onde ficam o titulo e o texto da direita (as letras vao para o lote e
+  -- saem por cima de tudo: um retangulo preto nao as cobriria)
   local w = Texto.largura("f3", texto)
-  ui.rectfill(240 - w // 2 - 12, 0, 240 + w // 2 + 11, 27, Cores.preto)
+  local x0, x1 = 240 - w // 2 - 12, 240 + w // 2 + 11
+  local d0 = direita and 470 - #direita * 6 or 480
+  for x = 0, 468, 12 do
+    if (x + 11 < x0 or x > x1) and x + 11 < d0 then Texto.extra("zebrada", x, 6) end
+  end
   ui.rectfill(0, 27, 479, 27, Cores.amarelo_escuro)
   Texto.escrever("f3", texto, 240 - w // 2, 2, "amarelo")
   if direita then
-    local dw = #direita * 6
-    ui.rectfill(470 - dw, 7, 475, 20, Cores.preto)
-    ui.print(direita, 473 - dw, 10, Cores.cinza_claro)
+    ui.print(direita, d0 + 3, 10, Cores.cinza_claro)
   end
 end
 
