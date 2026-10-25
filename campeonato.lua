@@ -230,10 +230,15 @@ function Campeonato.proposta(e, corrida, d)
 end
 
 -- ---------------------------------------------------------------- agiota
+-- quanto se devolve por um emprestimo de v (com os juros, arredondado para cima na centena)
+function Campeonato.devolve(v)
+  return math.ceil(v * C.AGIOTA_JUROS / 100) * 100
+end
+
 function Campeonato.divida(e)
   local n = e.divida_n or 0
   if n == 0 then return 0 end
-  return floor(C.AGIOTA_EMPRESTIMOS[n] * C.AGIOTA_JUROS / 100) * 100
+  return Campeonato.devolve(C.AGIOTA_EMPRESTIMOS[n])
 end
 
 function Campeonato.emprestar(e, n)

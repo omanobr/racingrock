@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.36"
+C.VERSAO = "0.37"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -91,7 +91,7 @@ C.RECOMPENSA_CHANCE = 25   -- %
 C.RECOMPENSA_ABATES = 3
 C.RECOMPENSA_MULTA = 0.5
 -- Agiota: empresta, cobra JUROS em PRAZO rodadas; se nao pagar, leva o dinheiro e as melhorias
-C.AGIOTA_EMPRESTIMOS = { 5000, 10000, 20000 }
+C.AGIOTA_EMPRESTIMOS = { 500, 1000, 2000 }   -- v0.37: eram 5/10/20 mil (pulava etapas da progressao)
 C.AGIOTA_JUROS = 1.5
 C.AGIOTA_PRAZO = 5
 C.MINA_FREIA = -0.5     -- velocidade x isto (o Death Rally usa -0.7)
@@ -173,7 +173,7 @@ C.NIVEIS = {
   { id = "medio", nome = "M\xC9DIO", fator = 1.0, curva = 0.1, faixa = 0.15, turbo_reta = 12,
     elastico = { atras = 1.02, atras_longe = 1.05 }, minas = 1, mira = math.rad(6), pausa = 1.0, premio = 1.0 },
   { id = "dificil", nome = "DIF\xCDCIL", fator = 1.05, curva = 0.0, faixa = 0.1, turbo_reta = 10,
-    elastico = { atras = 1.03, atras_longe = 1.07 }, minas = 2, mira = math.rad(3), pausa = 1.3, premio = 1.4 },
+    elastico = { atras = 1.03, atras_longe = 1.07 }, minas = 2, mira = math.rad(3), pausa = 1.3, premio = 1.0 },   -- v0.37: era 1,4 (3 vitorias em corrida dificil compravam o puma)
 }
 C.NIVEL = 2             -- nivel da corrida rapida (o menu troca)
 -- Carros com personalidade (ideia do Felipe): a ficha de cada modelo (carros.lua, notas 1 a 5)

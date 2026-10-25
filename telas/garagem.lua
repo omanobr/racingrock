@@ -132,7 +132,7 @@ function Tela:montar()
     end }
   else
     for n, v in ipairs(C.AGIOTA_EMPRESTIMOS) do
-      ag[#ag + 1] = { texto = string.format("PEGAR %s (DEVOLVE %s)", dinheiro(v), dinheiro(v * C.AGIOTA_JUROS // 100 * 100)),
+      ag[#ag + 1] = { texto = string.format("PEGAR %s (DEVOLVE %s)", dinheiro(v), dinheiro(Campeonato.devolve(v))),
                       acao = function() Campeonato.emprestar(e, n) self:avisar("DINHEIRO NA MAO!") self:montar() end }
     end
   end

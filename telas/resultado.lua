@@ -43,7 +43,11 @@ function Tela.nova(corrida)
   if corrida.campeonato and e then
     local antes = Campeonato.ranking(e)
     local rodada_antes = e.rodada
+    local tinha = e.dinheiro
     local res = Campeonato.aplicar(e, corrida, total)
+    -- o dinheiro de antes no alto da conta (v0.37: sem ele nao dava para conferir; o Felipe achou
+    -- que o mercado negro nao tinha sido cobrado)
+    table.insert(t.premios, 1, { string.format("%-24s $%6d", "VOCE TINHA", tinha), Cores.cinza_claro })
     local function linha(texto, valor, cor)
       t.premios[#t.premios + 1] = { string.format("%-24s%s$%6d", texto, valor < 0 and "-" or " ", math.abs(valor)), cor }
     end
@@ -56,6 +60,9 @@ function Tela.nova(corrida)
       linha(res.agiota.melhorias and "AGIOTA (+ AS MELHORIAS)" or "O AGIOTA COBROU", -res.agiota.levou, Cores.vermelho)
     end
     t.total = string.format("%-24s $%6d", "VOCE TEM AGORA", e.dinheiro)
+    -- a conta inteira no log (cabo USB), para conferir depois
+    print(string.format("RROCK CONTA tinha=%d corrida=%d recompensa=%d mercado=%d conserto=%d agiota=%d agora=%d",
+      tinha, total, r and r.valor or 0, res.mercado, res.conserto, res.agiota and res.agiota.levou or 0, e.dinheiro))
     t.senha = Campeonato.senha_bonita(e)
     t.final = res.venceu_final
     t.historia = true

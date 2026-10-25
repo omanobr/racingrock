@@ -41,10 +41,11 @@ local EXPLICA = {
     "OS CARROS DOS RIVAIS SAO IGUAIS AOS SEUS. ELES PILOTAM BEM,",
     "USAM O TURBO NAS RETAS E UM DELES LEVA MINAS.",
   },
-  {
-    "OS CARROS DOS RIVAIS ANDAM 5% MAIS: COM O FUSCA, ELES CHEGAM",
-    "A 143 KM/H E VOCE A 136. NAO ERRAM CURVA, QUASE NAO ERRAM",
-    "TIRO E DOIS DELES LEVAM MINAS. OS PREMIOS SAO 40% MAIORES.",
+  {   -- v0.37: punitivo, e avisa (pedido do Felipe; ate a v0.36 os premios eram 40% maiores)
+    { "MODO PUNITIVO: SO PARA QUEM JA DOMINA O JOGO.", "vermelho" },
+    "OS CARROS DOS RIVAIS ANDAM 5% MAIS (COM O FUSCA, ELES CHEGAM",
+    "A 143 KM/H E VOCE A 136), NAO ERRAM CURVA, QUASE NAO ERRAM",
+    "TIRO E DOIS DELES LEVAM MINAS. OS PREMIOS SAO OS DO MEDIO.",
   },
 }
 
@@ -98,8 +99,11 @@ function Tela:desenhar()
     Menu.cabecalho("N\xCDVEL DOS RIVAIS")
     Menu.centro("VALE PARA O CAMPEONATO INTEIRO (VAI NO PASSWORD)", 40, Cores.cinza_claro)
     self.menu_nivel:desenhar()
-    Menu.painel(36, 146, 408, 62)
-    for i, l in ipairs(EXPLICA[self.menu_nivel.escolha] or {}) do Menu.centro(l, 148 + i * 13, Cores.branco) end
+    Menu.painel(36, 146, 408, 75, self.menu_nivel.escolha == 3 and Cores.vermelho or nil)
+    for i, l in ipairs(EXPLICA[self.menu_nivel.escolha] or {}) do
+      if type(l) == "table" then Menu.centro(l[1], 148 + i * 13, Cores[l[2]])
+      else Menu.centro(l, 148 + i * 13, Cores.branco) end
+    end
     Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER   " .. Entrada.NOME.voltar .. ": VOLTAR")
     return
   end
