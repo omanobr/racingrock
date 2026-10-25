@@ -35,6 +35,7 @@ local EXPLICA = {
   {
     "OS CARROS DOS RIVAIS ANDAM 5% MENOS QUE OS IGUAIS AOS SEUS.",
     "ELES ERRAM MAIS AS CURVAS E A MIRA E NAO LEVAM MINAS.",
+    "OS PREMIOS SAO 20% MENORES.",
   },
   {
     "OS CARROS DOS RIVAIS SAO IGUAIS AOS SEUS. ELES PILOTAM BEM,",
@@ -43,7 +44,7 @@ local EXPLICA = {
   {
     "OS CARROS DOS RIVAIS ANDAM 5% MAIS: COM O FUSCA, ELES CHEGAM",
     "A 143 KM/H E VOCE A 136. NAO ERRAM CURVA, QUASE NAO ERRAM",
-    "TIRO E DOIS DELES LEVAM MINAS.",
+    "TIRO E DOIS DELES LEVAM MINAS. OS PREMIOS SAO 40% MAIORES.",
   },
 }
 
@@ -97,7 +98,7 @@ function Tela:desenhar()
     Menu.cabecalho("N\xCDVEL DOS RIVAIS")
     Menu.centro("VALE PARA O CAMPEONATO INTEIRO (VAI NO PASSWORD)", 40, Cores.cinza_claro)
     self.menu_nivel:desenhar()
-    Menu.painel(40, 150, 400, 56)
+    Menu.painel(36, 146, 408, 62)
     for i, l in ipairs(EXPLICA[self.menu_nivel.escolha] or {}) do Menu.centro(l, 148 + i * 13, Cores.branco) end
     Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER   " .. Entrada.NOME.voltar .. ": VOLTAR")
     return

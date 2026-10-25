@@ -24,11 +24,31 @@ local TELAS = {
   senha = require "telas.senha",
   garagem = require "telas.garagem",
   final = require "telas.final",
+  abertura = require "telas.abertura",
+  rodada = require "telas.rodada",
 }
 
 Jogo = { tela = nil }
 
+-- Fade (abertura): Jogo.brilho de 0 (preto) a 1 (normal); nil = normal. A paleta escurecida tem
+-- 16 niveis, cada um montado na primeira vez que aparece (como no GearX).
+local ESCURA = {}
+local function paleta_escura(n)
+  local t = ESCURA[n]
+  if t then return t end
+  t = { Palette[1] }   -- a cor 0 e a transparente: fica como esta
+  for i = 2, #Palette do
+    local c = Palette[i]   -- BGR555: vermelho nos 5 bits de baixo
+    local r, g, b = (c & 31) * n // 16, ((c >> 5) & 31) * n // 16, ((c >> 10) & 31) * n // 16
+    local v = r | (g << 5) | (b << 10)
+    t[i] = v == 0 and 0x0421 or v   -- 0x0000 e transparente no console: o mais escuro e 1,1,1
+  end
+  ESCURA[n] = t
+  return t
+end
+
 function Jogo.ir(nome, ...)
+  Jogo.brilho = nil   -- a tela nova pode comecar escura (ela mesma acerta)
   Jogo.nome_tela = nome
   Jogo.tela = TELAS[nome].nova(...)
   collectgarbage("collect")
@@ -38,7 +58,7 @@ if DEV.cena == "corrida" then
   Jogo.ir("corrida", { pista = DEV.pista or 1, variante = DEV.variante, voltas = DEV.voltas or C.VOLTAS,
                        autopiloto = DEV.autopiloto, modelo = DEV.modelo })
 else
-  Jogo.ir("titulo")
+  Jogo.ir(DEV.sem_abertura and "titulo" or "abertura")
 end
 
 -- medidor dos limites do aparelho (so no simulador, opcao "desempenho" do Modo de teste)
@@ -65,6 +85,7 @@ function update(frame)
 
   -- a paleta inteira, TODO quadro: o console zera a paleta a cada quadro
   local paleta = Palette
+  if Jogo.brilho and Jogo.brilho < 1 then paleta = paleta_escura(math.floor(Jogo.brilho * 16)) end
   for i = 1, #paleta do palset(i - 1, paleta[i]) end
   ui.camera()
   ui.clip()

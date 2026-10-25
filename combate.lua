@@ -30,6 +30,9 @@ function Combate.novo(corrida)
       + (c.nivel_blindagem or 0) * C.MELHORIA_BLINDAGEM      -- oficina do modo historia
     c.blindagem = b < C.BLINDAGEM_MAX and b or C.BLINDAGEM_MAX
     c.fator_arma = escala(c.modelo.arma, C.ARMA_FATOR) * f
+    -- mercado negro do modo historia: rival sabotado larga avariado; foguete enche o turbo a mais
+    if c.sabotado then c.vida = C.SABOTAGEM_VIDA end
+    if c.foguete then c.turbo_carga = C.FOGUETE end
   end
   cb.e16, cb.e32 = Sprites.img.efx.e16, Sprites.img.efx.e32
   return cb
@@ -45,7 +48,7 @@ end
 -- causou. Quem acertou por ultimo (ate ABATE_ATE s antes) leva o abate.
 function Combate:dano(c, pontos, fonte, autor)
   if c.destruido or pontos <= 0 then return end
-  local valor = pontos / 1024
+  local valor = pontos / 1024 * C.DANO
   local agora = self.corrida.tempo
   c.dano_por[fonte] = (c.dano_por[fonte] or 0) + valor
   if autor and autor ~= c then c.agressor, c.agressor_em = autor, agora end
@@ -58,6 +61,7 @@ function Combate:dano(c, pontos, fonte, autor)
     self:efeito("explosao_grande", c.x, c.y)
     if c.agressor and agora - c.agressor_em <= C.ABATE_ATE and not c.agressor.destruido then
       c.agressor.abates = c.agressor.abates + 1
+      c.abatido_por = c.agressor        -- a recompensa do modo historia confere
     end
   end
 end
@@ -165,7 +169,17 @@ function Combate:atualizar(dt)
       -- batidas (carro.lua e corrida.lua anotam a velocidade da batida)
       if c.impacto and c.impacto > C.BATIDA_MIN then self:dano(c, batida(c, c.impacto), "muro") end
       if c.impacto_carro and c.impacto_carro > C.BATIDA_MIN then
-        self:dano(c, batida(c, c.impacto_carro), "carro", c.batido_por)
+        local p, o = batida(c, c.impacto_carro), c.batido_por
+        if o and o.espinhos then p = p * C.ESPINHOS end    -- o para-choque com espinhos do outro
+        if c.espinhos then p = p * 0.5 end                 -- e os seus seguram a batida
+        self:dano(c, p, "carro", o)
+      end
+      -- faiscas raspando no muro (bico do carro, no maximo ~12 por segundo)
+      c.relogio_raspa = (c.relogio_raspa or 0) - dt
+      if c.raspando and c.relogio_raspa <= 0 and (c.v > C.FAISCA_VEL or c.v < -C.FAISCA_VEL) then
+        c.relogio_raspa = 0.08
+        local f = c.comprimento / 2 - 2
+        self:efeito("faisca", c.x + sin(c.ang) * f, c.y - cos(c.ang) * f)
       end
       c.tiro_x = nil
       if c.atirando and c.municao > 0 and not c.destruido then atirar(self, c, dt) end

@@ -17,6 +17,8 @@ local Cores = {
   vinho = hex(0x6B1010),           -- faixa da opcao escolhida
   amarelo_escuro = hex(0xBD9410),
   azul_claro = hex(0x8CB5FF),
+  terra = hex(0xAD8C63),           -- poeira (rastros.lua)
+  terra_escura = hex(0x8C6B4A),
 }
 
 return Cores

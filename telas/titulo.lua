@@ -1,6 +1,7 @@
 -- Titulo e menu principal, com a arte do Felipe (img/tela/titulo e logo). Ao ligar o jogo, so a
 -- imagem, o logo e "APERTE START" piscando; apertando, o menu aparece por cima da imagem (pedido
--- do Felipe). Voltando ao titulo depois, o menu ja aparece.
+-- do Felipe). Voltando ao titulo depois, o menu ja aparece. Parado DEMO segundos no "APERTE
+-- START", roda uma demonstracao (pista, variacao e carro sorteados), como nos fliperamas.
 local C = require "config"
 local Entrada = require "entrada"
 local Cores = require "cores"
@@ -8,28 +9,37 @@ local Pista = require "pista"
 local Menu = require "menu"
 local Texto = require "texto"
 local D = require "dados_telas"
+local Som = require "som"
 
 local Tela = {}
 Tela.__index = Tela
 
+local DEMO = 20
+
+-- corrida de demonstracao: o computador pilota os 4; qualquer botao volta ao titulo
+local function demonstracao(pista, variante)
+  local Carros = require "carros"
+  Jogo.ir("corrida", { pista = pista or math.random(2, Pista.quantas()), variante = variante or math.random(4),
+                       voltas = 2, autopiloto = true, demo = true, modelo = Carros[math.random(#Carros)].id })
+end
+
 local menu = Menu.novo({
   { texto = "MODO HIST\xD3RIA", acao = function() Jogo.ir("historia") end },
   { texto = "CORRIDA R\xC1PIDA", acao = function() Jogo.ir("rapida") end },
-  { texto = "DEMONSTRA\xC7\xC3O", acao = function()
-    Jogo.ir("corrida", { pista = C.PISTA, variante = C.VARIANTE, voltas = Pista.LISTA[C.PISTA].voltas,
-                         autopiloto = true })
-  end },
+  { texto = "DEMONSTRA\xC7\xC3O", acao = function() demonstracao(C.PISTA, C.VARIANTE) end },
   { texto = "OP\xC7\xD5ES", acao = function() Jogo.ir("opcoes") end },
 }, 166, 152, 22, 192)
 
 function Tela.nova()
+  Som.musica("menu")
   return setmetatable({ quadro = 0 }, Tela)
 end
 
 function Tela:atualizar()
   self.quadro = self.quadro + 1
   if not Jogo.titulo_visto then
-    if Entrada.confirmar() or Entrada.pausar() then Jogo.titulo_visto = true end
+    if Entrada.confirmar() or Entrada.pausar() then Jogo.titulo_visto = true
+    elseif self.quadro > DEMO * 60 then demonstracao() end
     return
   end
   menu:atualizar()

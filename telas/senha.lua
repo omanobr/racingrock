@@ -1,4 +1,4 @@
--- Digitar o password (estilo Super Nintendo): 8 letras. Direcional para os lados escolhe a
+-- Digitar o password (estilo Super Nintendo): 9 letras (Campeonato.LETRAS). Direcional para os lados escolhe a
 -- casa, para cima e para baixo troca a letra; B confere; A volta (na primeira casa) ou volta
 -- uma casa.
 local Entrada = require "entrada"
@@ -12,27 +12,28 @@ Tela.__index = Tela
 
 local ALFA = Campeonato.ALFABETO
 local N = #ALFA
+local L = Campeonato.LETRAS
 
 -- o ultimo password digitado nesta sessao (para corrigir uma letra sem digitar tudo de novo)
 local ultimo
 
 function Tela.nova()
   local t = setmetatable({ casa = 1, letras = {}, aviso = nil, aviso_t = 0 }, Tela)
-  local base = ultimo or (Jogo.campeonato and Campeonato.senha(Jogo.campeonato)) or "AAAAAAAA"
-  for i = 1, 8 do t.letras[i] = ALFA:find(base:sub(i, i), 1, true) or 1 end
+  local base = ultimo or (Jogo.campeonato and Campeonato.senha(Jogo.campeonato)) or string.rep("A", L)
+  for i = 1, L do t.letras[i] = ALFA:find(base:sub(i, i), 1, true) or 1 end
   return t
 end
 
 function Tela:texto()
   local s = {}
-  for i = 1, 8 do s[i] = ALFA:sub(self.letras[i], self.letras[i]) end
+  for i = 1, L do s[i] = ALFA:sub(self.letras[i], self.letras[i]) end
   return table.concat(s)
 end
 
 function Tela:atualizar()
   if self.aviso_t > 0 then self.aviso_t = self.aviso_t - 1 end
-  if Entrada.esq() then self.casa = (self.casa - 2) % 8 + 1 end
-  if Entrada.dir() then self.casa = self.casa % 8 + 1 end
+  if Entrada.esq() then self.casa = (self.casa - 2) % L + 1 end
+  if Entrada.dir() then self.casa = self.casa % L + 1 end
   local l = self.letras
   -- segurando cima/baixo, depois de 1/3 de segundo a letra corre (4 por segundo... 15)
   local segura = 0
@@ -63,9 +64,9 @@ function Tela:desenhar()
   Menu.fundo()
   Menu.cabecalho("PASSWORD")
   Menu.centro("DIGITE O PASSWORD QUE VOCE ANOTOU", 60, Cores.cinza_claro)
-  -- 8 casas de 27 px, com um espaco no meio (ABCD EFGH)
-  local x0 = 240 - (8 * 31 + 14) // 2
-  for i = 1, 8 do
+  -- 9 casas de 27 px, com um espaco depois da 4a (ABCD EFGHJ)
+  local x0 = 240 - (L * 31 + 14) // 2
+  for i = 1, L do
     local x = x0 + (i - 1) * 31 + (i > 4 and 14 or 0)
     local aqui = i == self.casa
     Menu.painel(x, 96, 27, 33, aqui and Cores.amarelo or Cores.cinza_escuro)

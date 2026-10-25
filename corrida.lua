@@ -47,7 +47,8 @@ function Corrida.nova(opcoes)
   end
   r.voltas = opcoes.voltas or C.VOLTAS
   r.nivel = C.NIVEIS[opcoes.nivel or C.NIVEL] or C.NIVEIS[2]
-  r.preco_minas = opcoes.preco_minas
+  r.preco_compras = opcoes.preco_compras
+  r.recompensa = opcoes.recompensa
   r.dificuldade = opcoes.dificuldade or "facil"
   r.campeonato = opcoes.campeonato
   r.estado = "contagem"
@@ -86,10 +87,16 @@ function Corrida.nova(opcoes)
     })
     c.modelo = m
     c.cor = CORES[i]
+    c.retrato = i == 1 and require("dados_telas").retrato.jogador or (rival and rival.retrato)
     c.nivel_blindagem = i == 1 and (mel.blindagem or 0) or (rival and rival.blindagem or 0)
     c.fator_nivel = nivel
-    if i == 1 then c.minas_iniciais = opcoes.minas or 0
-    else c.minas_iniciais = rival and rival.minas or opcoes.minas_rivais or 0 end
+    if i == 1 then
+      c.minas_iniciais = opcoes.minas or 0
+      c.espinhos, c.foguete = opcoes.espinhos, opcoes.foguete      -- mercado negro
+    else
+      c.minas_iniciais = rival and rival.minas or opcoes.minas_rivais or 0
+      c.sabotado = rival and rival.sabotado
+    end
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada
     c.progresso = c.idx - p.n
@@ -330,7 +337,7 @@ function Corrida:premiar()
     c.pontos = (c.destruido and 0 or (C.PONTOS_POSICAO[i] or 0)) + c.abates * C.PONTOS_ABATE
   end
   local j = self.jogador
-  local P = C.PREMIOS[self.dificuldade] or C.PREMIOS.facil
+  local P = require("campeonato").premios(self.nivel, self.dificuldade)
   local linhas = {}
   local function linha(texto, valor)
     if valor > 0 then linhas[#linhas + 1] = { texto, valor } end

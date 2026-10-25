@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.28"
+C.VERSAO = "0.29"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -55,6 +55,9 @@ C.RESGATE_PARADO = 4    -- segundos sem sair do lugar (menos de 6 px por segundo
 --   mina: 20 x (1024 - blindagem); batida: (1024 - blindagem) x (velocidade em px/quadro)^2, ate 10000
 --   blindagem = base do carro (120 a 350) + nivel comprado (360 a 600) + 100 do jogador, ate 900
 C.VIDA = 100
+C.DANO = 2.5            -- multiplica todo dano (tiro, mina, batida). v0.29: o Felipe achou os carros
+                        -- "tanques" (com 1: 0 a 0,3 rivais destruidos por corrida, ele nunca);
+                        -- com 2,5: ~1 rival por corrida, voce de vez em quando, dano medio ~50%
 C.KMH = 0.7             -- velocimetro: km/h por px/s (fusca ~136, puma ~161, com turbo ~260)
 C.ARMA_ALCANCE = 170    -- px (130 no Death Rally, x ESCALA)
 C.ARMA_FATOR = { 0.2, 0.95 }       -- arma 1 a 5 da ficha (carros.lua): 0,2 + 0,15 x tipo (0 a 5)
@@ -68,8 +71,28 @@ C.BATIDA_MAX = 10000
 C.BATIDA_MIN = 40       -- batida mais devagar que isso (px/s) nao tira vida
 C.MUNICAO = 6           -- segundos de tiro no comeco da corrida (5,6 s no Death Rally)
 C.MUNICAO_ITEM = 4      -- segundos a mais por caixa de municao
-C.MINAS = 3             -- minas de um pacote (modo historia: compradas antes da corrida)
-C.PRECO_MINAS = 400     -- o pacote, no modo historia
+C.MINAS = 3             -- minas de um pacote (modo historia: compradas no mercado negro)
+-- Mercado negro (modo historia, v0.29, como no Death Rally): compras que valem so para a proxima
+-- corrida, pagas no fim dela (saindo no meio, nada e cobrado)
+C.MERCADO = {
+  minas = 400,          -- um pacote de C.MINAS
+  espinhos = 600,       -- batida do seu para-choque tira ESPINHOS x mais dos outros (e a metade de voce)
+  foguete = 500,        -- combustivel de foguete: o turbo larga com FOGUETE tanques
+  sabotagem = 900,      -- um rival larga com SABOTAGEM_VIDA % de vida
+}
+C.ESPINHOS = 3
+C.FOGUETE = 2
+C.SABOTAGEM_VIDA = 55
+-- Recompensa (proposta antes da corrida, como no Death Rally): destruir um rival nesta corrida.
+-- Chance de aparecer ao escolher uma corrida; valor = RECOMPENSA_ABATES x o premio por abate da
+-- corrida; se ele escapar, voce paga a MULTA (fracao do valor). Avisado na proposta.
+C.RECOMPENSA_CHANCE = 25   -- %
+C.RECOMPENSA_ABATES = 3
+C.RECOMPENSA_MULTA = 0.5
+-- Agiota: empresta, cobra JUROS em PRAZO rodadas; se nao pagar, leva o dinheiro e as melhorias
+C.AGIOTA_EMPRESTIMOS = { 5000, 10000, 20000 }
+C.AGIOTA_JUROS = 1.5
+C.AGIOTA_PRAZO = 5
 C.MINA_FREIA = -0.5     -- velocidade x isto (o Death Rally usa -0.7)
 C.MINA_GIRO = math.rad(25)   -- gira ate isto para um lado
 C.MINA_ARMA = 1.0       -- segundos ate a mina valer para quem soltou
@@ -80,11 +103,12 @@ C.PONTOS_ABATE = 2
 -- dinheiro do jogador por corrida, pela dificuldade (o Death Rally paga ~750/375/187 nas faceis;
 -- aqui tudo multiplo de 100: o password guarda o dinheiro em centenas). A corrida rapida paga
 -- como a facil.
+-- v0.29: x2,2 e o 4o lugar ganha metade do 3o (campeonato simulado: ferramentas/medir_campanha.py)
 C.PREMIOS = {
-  facil = { posicao = { 800, 400, 200, 0 }, abate = 300, sobrevivente = 1000 },
-  medio = { posicao = { 1600, 800, 400, 0 }, abate = 500, sobrevivente = 2000 },
-  dificil = { posicao = { 3200, 1600, 800, 0 }, abate = 800, sobrevivente = 3000 },
-  final = { posicao = { 10000, 0, 0, 0 }, abate = 1000, sobrevivente = 5000 },
+  facil = { posicao = { 1800, 900, 400, 200 }, abate = 700, sobrevivente = 2000 },
+  medio = { posicao = { 3500, 1800, 900, 400 }, abate = 1100, sobrevivente = 4000 },
+  dificil = { posicao = { 7000, 3500, 1800, 900 }, abate = 1800, sobrevivente = 6000 },
+  final = { posicao = { 22000, 0, 0, 0 }, abate = 2200, sobrevivente = 10000 },
 }
 -- modo historia (campeonato.lua): pontos do ranking por colocacao (+1 por abate), conserto por %
 -- de estrago (+1 a cada carro melhor) e o efeito das melhorias da oficina (por nivel, ate 3). A
@@ -102,6 +126,7 @@ C.ITEM_INTERVALO = 3    -- segundos entre um item novo e outro
 C.CONSERTO = 15         -- % de vida da chave (30 na v0.21: o Felipe achou que curava demais)
 C.DINHEIRO_ITEM = 100
 C.FUMACA_VIDA = 40      -- abaixo disso o carro solta fumaca
+C.FAISCA_VEL = 60       -- raspando no muro mais rapido que isso (px/s), solta faiscas
 C.EFEITO_DURA = { explosao = 0.4, explosao_grande = 0.9, faisca = 0.15, fumaca = 0.8 }
 C.IA_MINA_ESPERA = 5    -- segundos entre uma mina e outra do computador
 C.IA_TIRO_INICIO = 4    -- o computador nao atira nos primeiros segundos (todos colados na largada)
@@ -127,21 +152,25 @@ C.IA_ELASTICO_LONGE = 40   -- elastico: a mais de 40 pontos (640 px) do jogador 
 --   fator: multiplica TODA a ficha do carro deles (velocidade, arranque, aderencia, blindagem e
 --     arma); no DIFICIL o fusca deles chega a ~137 km/h e o seu a ~130
 --   mira: erro maximo do tiro, sorteado a cada rajada (a 100 px, 7 graus = 12 px: erra metade
---     dos tiros de longe); pausa: x as pausas entre as rajadas (no DIFICIL quase nao erra e atira
---     mais)
+--     dos tiros de longe); pausa: x as pausas entre as rajadas (no DIFICIL quase nao erra, mas
+--     atira com pausas maiores: com 0,7 o jogador explodia em metade das corridas)
 --   curva: quanto tiram o pe nas curvas (0 = nada); faixa: quanto se afastam da linha de corrida
 --   turbo_reta: pontos de reta (16 px) que esperam ter pela frente para usar o turbo
 --   elastico: potencia x isto quando o computador esta atras do jogador (longe: a mais de
 --     IA_ELASTICO_LONGE pontos). So ajuda quem esta atras (pedido do Felipe): na frente nao perde
 --     nada, senao um fusca alcanca um puma
 --   minas: quantos dos 3 rivais do modo historia levam um pacote de minas
+--   premio: x os premios do modo historia ("taxa de ganho proporcional", pedido do Felipe). Medido
+--     com ferramentas/medir_campanha.py (o piloto automatico jogando o campeonato inteiro): no
+--     FACIL ~22 rodadas; no MEDIO, quem pilota um pouco melhor que a IA termina em ~30; no DIFICIL,
+--     so quem pilota bem melhor (31 rodadas; ou 2o lugar na 40a)
 C.NIVEIS = {
   { id = "facil", nome = "F\xC1CIL", fator = 0.95, curva = 0.3, faixa = 0.3, turbo_reta = 16,
-    elastico = { atras = 1.02, atras_longe = 1.05 }, minas = 0, mira = math.rad(12), pausa = 1.3 },
+    elastico = { atras = 1.0, atras_longe = 1.03 }, minas = 0, mira = math.rad(12), pausa = 1.3, premio = 0.8 },
   { id = "medio", nome = "M\xC9DIO", fator = 1.0, curva = 0.1, faixa = 0.15, turbo_reta = 12,
-    elastico = { atras = 1.04, atras_longe = 1.08 }, minas = 1, mira = math.rad(6), pausa = 1.0 },
+    elastico = { atras = 1.02, atras_longe = 1.05 }, minas = 1, mira = math.rad(6), pausa = 1.0, premio = 1.0 },
   { id = "dificil", nome = "DIF\xCDCIL", fator = 1.05, curva = 0.0, faixa = 0.1, turbo_reta = 10,
-    elastico = { atras = 1.06, atras_longe = 1.12 }, minas = 2, mira = math.rad(1.5), pausa = 0.7 },
+    elastico = { atras = 1.03, atras_longe = 1.07 }, minas = 2, mira = math.rad(3), pausa = 1.3, premio = 1.4 },
 }
 C.NIVEL = 2             -- nivel da corrida rapida (o menu troca)
 -- Carros com personalidade (ideia do Felipe): a ficha de cada modelo (carros.lua, notas 1 a 5)

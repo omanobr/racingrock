@@ -8,6 +8,8 @@ local Entrada = require "entrada"
 local Cores = require "cores"
 local Carro = require "carro"
 local Texto = require "texto"
+local Som = require "som"
+local Rastros = require "rastros"
 
 local Tela = {}
 Tela.__index = Tela
@@ -18,6 +20,8 @@ local TELA_W = 480
 function Tela.nova(opcoes)
   local t = setmetatable({}, Tela)
   t.corrida = Corrida.nova(opcoes or {})
+  t.rastros = Rastros.novo()
+  t.demo = opcoes and opcoes.demo
   t.camera = Camera.nova(t.corrida.pista, t.corrida.jogador)
   t.folha, t.tiles = {}, {}
   t.sombra = Sprites.img.car.sombra
@@ -26,6 +30,16 @@ function Tela.nova(opcoes)
 end
 
 function Tela:atualizar()
+  -- demonstracao (o titulo parado ou DEMONSTRACAO no menu): qualquer botao volta ao titulo
+  if self.demo and (Entrada.confirmar() or Entrada.voltar() or Entrada.pausar()) then
+    Jogo.ir("titulo")
+    return
+  end
+  -- a musica da corrida comeca depois de carregar a pista (um quadro demorado engasga a musica)
+  if not self.musica then
+    self.musica = true
+    Som.corrida(self.corrida.campeonato and self.corrida.campeonato.final)
+  end
   if Entrada.pausar() then self.pausa = not self.pausa end
   if self.pausa then
     -- sair no meio: no modo historia volta para a garagem sem mudar nada (como se a corrida
@@ -35,14 +49,18 @@ function Tela:atualizar()
   end
   local r = self.corrida
   r:atualizar(Tempo.passo)
+  if r.estado ~= "contagem" then self.rastros:atualizar(r, Tempo.passo / 60) end
   self.camera:atualizar(Tempo.passo)
-  if r.estado == "fim" and r.tempo - r.fim_em > 3 then Jogo.ir("resultado", r) end
+  if r.estado == "fim" and r.tempo - r.fim_em > 3 then
+    if self.demo then Jogo.ir("titulo") else Jogo.ir("resultado", r) end
+  end
 end
 
 function Tela:desenhar()
   local r, cam = self.corrida, self.camera
   local x0, y0 = cam.x0, cam.y0
   Fundo.desenhar(r.pista, x0, y0)
+  self.rastros:desenhar(x0, y0)
   r.combate:desenhar_chao(x0, y0, r.quadros)
 
   -- sombras (todas da mesma folha: uma carga so) e depois os carros (cada modelo tem 2 folhas:
@@ -79,6 +97,12 @@ function Tela:desenhar()
   ui.rectfill(TELA_W - m, 0, TELA_W - 1, 269, Cores.preto)
 
   Hud.desenhar(r)
+  if self.demo and (r.quadros // 30) % 2 == 0 then
+    local s = "DEMONSTRAÇÃO - APERTE START"
+    local w = Texto.largura("f2", s)
+    ui.rectfill(240 - w // 2 - 8, 196, 240 + w // 2 + 7, 215, Cores.preto)
+    Texto.escrever("f2", s, 240 - w // 2, 199, "amarelo")
+  end
   if self.pausa then
     ui.rectfill(164, 104, 315, 155, Cores.amarelo_escuro)
     ui.rectfill(165, 105, 314, 154, Cores.preto)

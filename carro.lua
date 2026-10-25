@@ -84,8 +84,11 @@ function Carro:atualizar(dt, pista)
     v = v + C.ACEL_TURBO * M * dt
     k = k + C.ARRASTO_ACEL
   else
-    self.turbo_carga = self.turbo_carga + 0.0137 * dt
-    if self.turbo_carga > 1 then self.turbo_carga = 1 end
+    -- enche devagar ate 1 (o combustivel de foguete do mercado negro larga acima disso)
+    if self.turbo_carga < 1 then
+      self.turbo_carga = self.turbo_carga + 0.0137 * dt
+      if self.turbo_carga > 1 then self.turbo_carga = 1 end
+    end
     if self.acel then
       -- arranque da ficha: forte parado, some perto da velocidade final (que nao muda)
       local f = v / self.vmax
@@ -169,7 +172,7 @@ function Carro:atualizar(dt, pista)
 end
 
 function Carro:mover(nx, ny, pista)
-  self.travado = false
+  self.travado, self.raspando = false, false
   local m, n = self:bate(nx, ny, self.ang, pista)
   if m == 0 then
     self.x, self.y = nx, ny
@@ -179,6 +182,7 @@ function Carro:mover(nx, ny, pista)
   -- ao longo do muro). Na v0.1 andava livre e atravessava o muro; na v0.12-0.16 so andava se
   -- fosse para sair, e o carro travava nos cantos.
   local m0, antes = self:bate(self.x, self.y, self.ang, pista)
+  self.raspando = true      -- combate.lua solta faiscas (com o carro rapido)
   if antes > 0 then
     if n <= antes then
       self.x, self.y = nx, ny

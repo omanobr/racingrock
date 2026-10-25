@@ -1,7 +1,8 @@
 -- Garagem do modo historia: o seu carro, dinheiro, ranking e o PASSWORD; daqui sai para a
--- proxima corrida (3 a escolher, e as minas, compradas antes de cada corrida, como no Death
--- Rally), a oficina (melhorias), a concessionaria (carros), o ranking e, no 1o lugar, o desafio
--- final (campeonato.lua tem as regras).
+-- proxima corrida (3 cartazes; escolhida uma, as vezes chega uma proposta de recompensa, e depois
+-- o mercado negro: minas, espinhos, foguete, sabotagem, como no Death Rally), a oficina
+-- (melhorias), a concessionaria (carros), o agiota, o ranking e, no 1o lugar, o desafio final
+-- (campeonato.lua tem as regras).
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Carros = require "carros"
@@ -12,6 +13,7 @@ local Rapida = require "telas.rapida"
 local Texto = require "texto"
 local C = require "config"
 local DT = require "dados_telas"
+local Som = require "som"
 
 local Tela = {}
 Tela.__index = Tela
@@ -31,8 +33,9 @@ Tela.dinheiro = dinheiro
 local NOME_DIFICULDADE = { facil = "F\xC1CIL", medio = "M\xC9DIA", dificil = "DIF\xCDCIL" }
 
 function Tela.nova()
-  local t = setmetatable({ modo = "menu", aviso = nil, aviso_t = 0, confirmar = nil, minas = false }, Tela)
+  local t = setmetatable({ modo = "menu", aviso = nil, aviso_t = 0, confirmar = nil }, Tela)
   t.e = Jogo.campeonato
+  Som.musica("menu")
   t:montar()
   return t
 end
@@ -53,6 +56,8 @@ function Tela:montar()
     or string.format("LIDER: %s (%d)", lider.nome, lider.pontos)
   self.senha = Campeonato.senha_bonita(e)
   self.nivel = "RIVAIS " .. Campeonato.nivel(e).id:upper()
+  local divida = Campeonato.divida(e)
+  self.divida = divida > 0 and string.format("AGIOTA: %s ATE A RODADA %d", dinheiro(divida), e.rodada + e.prazo)
   self.rank = rank
   self.corridas = Campeonato.corridas(e)
 
@@ -60,6 +65,7 @@ function Tela:montar()
     { texto = "PR\xD3XIMA CORRIDA", acao = function() self:ir("corridas") end },
     { texto = "OFICINA", acao = function() self:ir("oficina") end },
     { texto = "CONCESSION\xC1RIA", acao = function() self:ir("loja") end },
+    { texto = "AGIOTA", acao = function() self:ir("agiota") end },
     { texto = "RANKING", acao = function() self:ir("ranking") end },
   }
   if Campeonato.desafio_aberto(e) then
@@ -67,17 +73,15 @@ function Tela:montar()
   end
   opcoes[#opcoes + 1] = { texto = "SAIR", acao = function() Jogo.ir("titulo") end }
   local escolha = self.menu and self.menu.escolha or 1
-  self.menu = Menu.novo(opcoes, 44, 40, 22, 206)
+  self.menu = Menu.novo(opcoes, 44, 38, 20, 206)
   if escolha <= #opcoes then self.menu.escolha = escolha end
 
   -- as 3 corridas da rodada
   local lista = {}
-  for _, c in ipairs(self.corridas) do
-    lista[#lista + 1] = { texto = NOME_DIFICULDADE[c.dificuldade.id] or c.dificuldade.nome, acao = function() self:correr(c) end }
+  for d, c in ipairs(self.corridas) do
+    lista[#lista + 1] = { texto = NOME_DIFICULDADE[c.dificuldade.id] or c.dificuldade.nome,
+                          acao = function() self:escolher_corrida(c, d) end }
   end
-  -- minas: so a metralhadora vem de fabrica; o pacote vale para a proxima corrida
-  lista[#lista + 1] = { texto = "MINAS", valor = function() return self.minas and "SIM" or "N\xC3O" end,
-                        acao = function() self.minas = not self.minas end }
   lista[#lista + 1] = { texto = "VOLTAR", acao = function() self:ir("menu") end }
   local esc_corridas = self.menu_corridas and self.menu_corridas.escolha or 1
   self.menu_corridas = Menu.novo(lista, 44, 40, 22, 150)
@@ -119,6 +123,66 @@ function Tela:montar()
   local esc_loja = self.menu_loja and self.menu_loja.escolha or 1
   self.menu_loja = Menu.novo(loja, 26, 42, 16, 144, true)
   self.menu_loja.escolha = esc_loja
+
+  -- agiota: empresta (um emprestimo por vez) ou recebe
+  local ag = {}
+  if divida > 0 then
+    ag[1] = { texto = "PAGAR " .. dinheiro(divida), acao = function()
+      if Campeonato.pagar_divida(e) then self:avisar("DIVIDA PAGA. ATE A PROXIMA...") self:montar()
+      else self:avisar("DINHEIRO INSUFICIENTE") end
+    end }
+  else
+    for n, v in ipairs(C.AGIOTA_EMPRESTIMOS) do
+      ag[#ag + 1] = { texto = string.format("PEGAR %s (DEVOLVE %s)", dinheiro(v), dinheiro(v * C.AGIOTA_JUROS // 100 * 100)),
+                      acao = function() Campeonato.emprestar(e, n) self:avisar("DINHEIRO NA MAO!") self:montar() end }
+    end
+  end
+  ag[#ag + 1] = { texto = "VOLTAR", acao = function() self:ir("menu") end }
+  self.menu_agiota = Menu.novo(ag, 60, 150, 18, 300, true)
+end
+
+-- corrida escolhida no cartaz: a proposta de recompensa (as vezes) e depois o mercado negro
+function Tela:escolher_corrida(c, d)
+  self.corrida_escolhida = c
+  self.compras = {}
+  self.proposta = Campeonato.proposta(self.e, c, d)
+  self:montar_mercado()
+  if self.proposta then
+    self.menu_proposta = Menu.novo({
+      { texto = "ACEITAR", acao = function() self.compras.recompensa = self.proposta self:ir("mercado") end },
+      { texto = "RECUSAR", acao = function() self:ir("mercado") end },
+    }, 120, 184, 18, 140)
+    self:ir("proposta")
+  else
+    self:ir("mercado")
+  end
+end
+
+local function sim(v) return v and "SIM" or "NAO" end
+
+-- o mercado negro: o que vale so para a proxima corrida (pago no fim dela)
+function Tela:montar_mercado()
+  local compras, c, M = self.compras, self.corrida_escolhida, C.MERCADO
+  local function item(chave, nome)
+    return { texto = function() return string.format("%-20s %7s   %s", nome, dinheiro(M[chave]), sim(compras[chave])) end,
+             acao = function() compras[chave] = not compras[chave] end, explica = chave }
+  end
+  self.menu_mercado = Menu.novo({
+    item("minas", "MINAS (PACOTE DE 3)"),
+    item("espinhos", "ESPINHOS"),
+    item("foguete", "COMBUSTIVEL DE FOGUETE"),
+    { texto = function()
+        local k = compras.sabotar
+        return string.format("%-20s %7s   %s", "SABOTAR UM RIVAL", dinheiro(M.sabotagem),
+          k and Campeonato.PILOTOS[c.rivais[k]][1] or "NINGUEM")
+      end,
+      acao = function()
+        local k = (compras.sabotar or 0) + 1
+        compras.sabotar = k <= #c.rivais and k or nil
+      end, explica = "sabotagem" },
+    { texto = "CORRER", acao = function() self:correr(c) end, explica = "correr" },
+    { texto = "VOLTAR", acao = function() self:ir("corridas") end, explica = "voltar" },
+  }, 40, 52, 18, 400, true)
 end
 
 function Tela:ir(modo)
@@ -147,11 +211,12 @@ function Tela:comprar_carro(i)
 end
 
 function Tela:correr(corrida)
-  if self.minas and self.e.dinheiro < C.PRECO_MINAS then
-    self:avisar("DINHEIRO INSUFICIENTE PARA AS MINAS")
+  local compras = corrida.final and {} or (self.compras or {})
+  if Campeonato.preco_compras(compras) > self.e.dinheiro then
+    self:avisar("DINHEIRO INSUFICIENTE PARA AS COMPRAS")
     return
   end
-  Jogo.ir("corrida", Campeonato.opcoes_da_corrida(self.e, corrida, self.minas))
+  Jogo.ir("corrida", Campeonato.opcoes_da_corrida(self.e, corrida, compras))
 end
 
 function Tela:atualizar()
@@ -164,6 +229,15 @@ function Tela:atualizar()
   elseif modo == "desafio" then
     if Entrada.voltar() then self:ir("menu")
     elseif Entrada.confirmar() then self:correr(Campeonato.desafio(self.e)) end
+  elseif modo == "proposta" then
+    if Entrada.voltar() then self:ir("corridas") return end
+    self.menu_proposta:atualizar()
+  elseif modo == "mercado" then
+    if Entrada.voltar() then self:ir("corridas") return end
+    self.menu_mercado:atualizar()
+  elseif modo == "agiota" then
+    if Entrada.voltar() then self:ir("menu") return end
+    self.menu_agiota:atualizar()
   else
     -- cartazes das corridas: o direcional para os lados tambem troca de cartaz
     if modo == "corridas" and self.menu_corridas.escolha <= 3 then
@@ -198,13 +272,14 @@ end
 
 function Tela:desenhar_menu()
   Menu.imagem("garagem")
-  Menu.painel(8, 32, 228, 186)
+  Menu.painel(8, 32, 228, 194)
   self.menu:desenhar()
   -- dinheiro e ranking embaixo do menu
-  Texto.escrever("f2", self.dinheiro, 24, 170, "amarelo")
-  local w = Texto.escrever("f2", self.posicao, 24, 190, "branco")
-  ui.print(self.pontos, 30 + w, 194, Cores.cinza)
-  ui.print(self.lider, 24, 208, Cores.cinza_claro)
+  Texto.escrever("f2", self.dinheiro, 24, 178, "amarelo")
+  local w = Texto.escrever("f2", self.posicao, 24, 196, "branco")
+  ui.print(self.pontos, 30 + w, 200, Cores.cinza)
+  if self.divida then ui.print(self.divida, 24, 214, Cores.vermelho)
+  else ui.print(self.lider, 24, 214, Cores.cinza_claro) end
   -- o seu carro: a ficha num painel e o carro no chao da oficina
   local m = self.modelo
   Menu.painel(296, 32, 176, 102)
@@ -213,9 +288,9 @@ function Tela:desenhar_menu()
   Rapida.ficha_barras(m, 304, 68)
   Rapida.carro(m, 372, 216)
   -- password
-  Menu.painel(70, 222, 340, 31, Cores.amarelo_escuro)
-  ui.print("PASSWORD:", 82, 234, Cores.cinza_claro)
-  Texto.escrever("f3", self.senha, 150, 226, "amarelo")
+  Menu.painel(60, 228, 360, 27, Cores.amarelo_escuro)
+  ui.print("PASSWORD:", 72, 238, Cores.cinza_claro)
+  Texto.escrever("f3", self.senha, 136, 230, "amarelo")
   faixa_rodape()
 end
 
@@ -239,7 +314,7 @@ function Tela:cartaz(c, x, escolhido)
     ui.print(V.nome, x + (w - #V.nome * 6) // 2, y + 16 + (#linhas + 1) * 9, Cores.amarelo)
   end
   Rapida.mapa(pista.id, x + w // 2, y + 54, V.espelho)
-  local P = C.PREMIOS[c.dificuldade.id]
+  local P = Campeonato.premios(Campeonato.nivel(self.e), c.dificuldade.id)
   local premio = "1o " .. dinheiro(P.posicao[1])
   ui.print(premio, x + (w - #premio * 6) // 2, y + 113, Cores.verde)
   for k, i in ipairs(c.rivais) do
@@ -256,18 +331,16 @@ function Tela:desenhar_corridas()
   for k, c in ipairs(self.corridas) do self:cartaz(c, CARTAZ_X[k], k == esc) end
   -- embaixo: minas, voltar e o que vale a corrida escolhida (nas outras opcoes, a ultima)
   Menu.painel(8, 212, 464, 42)
-  opcao("MINAS: " .. (self.minas and "SIM" or "N\xC3O"), 40, 215, 162, esc == 4)
-  opcao("VOLTAR", 40, 234, 162, esc == 5)
+  opcao("VOLTAR", 40, 225, 110, esc == 4)
   local c = self.corridas[esc] or self.ultima_corrida or self.corridas[1]
   self.ultima_corrida = c
-  local P = C.PREMIOS[c.dificuldade.id]
+  local P = Campeonato.premios(Campeonato.nivel(self.e), c.dificuldade.id)
   local pts = C.PONTOS_RANKING[c.dificuldade.id]
   ui.print(string.format("PONTOS: 1o +%d  2o +%d  3o +%d  ABATE +%d", pts[1], pts[2], pts[3], C.PONTOS_RANKING_ABATE),
-    206, 216, Cores.amarelo)
+    176, 216, Cores.amarelo)
   ui.print(string.format("PREMIO: 2o %s  3o %s  ABATE %s", dinheiro(P.posicao[2]), dinheiro(P.posicao[3]),
-    dinheiro(P.abate)), 206, 228, Cores.verde)
-  ui.print(string.format("MINAS: 3 POR %s, SO NESTA CORRIDA", dinheiro(C.PRECO_MINAS)), 206, 240,
-    self.minas and Cores.verde or Cores.cinza)
+    dinheiro(P.abate)), 176, 228, Cores.verde)
+  ui.print(string.format("%d VOLTAS. DEPOIS: MERCADO NEGRO", c.voltas), 176, 240, Cores.cinza)
   faixa_rodape()
 end
 
@@ -346,13 +419,82 @@ function Tela:desenhar_desafio()
   ui.spr(Sprites.img.tela.adversario, 40, 66)
   Texto.escrever("f2", "O ADVERS\xC1RIO", 152, 60, "amarelo")
   for i, l in ipairs(FALA) do ui.print(l, 152, 72 + i * 13, Cores.branco) end
-  ui.print("PREMIO: " .. dinheiro(C.PREMIOS.final.posicao[1]) .. " E O TITULO DA LIGA", 152, 160, Cores.verde)
+  ui.print("PREMIO: " .. dinheiro(Campeonato.premios(Campeonato.nivel(self.e), "final").posicao[1])
+    .. " E O TITULO DA LIGA", 152, 160, Cores.verde)
   ui.print("ELE PILOTA UM PUMA ENVENENADO.", 152, 176, Cores.cinza_claro)
   ui.print(self.nivel, 152, 192, Cores.cinza)
 end
 
+-- proposta de recompensa, por cima dos cartazes
+function Tela:desenhar_proposta()
+  self:desenhar_corridas()
+  local p = self.proposta
+  Menu.painel(52, 52, 376, 172, Cores.vermelho)
+  Texto.escrever("f2", "PROPOSTA", 68, 64, "amarelo")
+  ui.tile(Sprites.img.ui.ret36, self.corrida_escolhida.rivais[p.alvo] - 1, 68, 90)
+  ui.print("UM APOSTADOR QUER VER O CARRO DE", 116, 92, Cores.branco)
+  ui.print(p.nome .. " FORA DESTA CORRIDA.", 116, 104, Cores.branco)
+  ui.print("DESTRUA O CARRO (O ABATE TEM DE SER SEU)", 116, 122, Cores.branco)
+  ui.print("E GANHE " .. dinheiro(p.valor) .. ".", 116, 134, Cores.verde)
+  ui.print("SE O CARRO ESCAPAR, VOCE PAGA " .. dinheiro(p.multa) .. ".", 116, 152, Cores.vermelho)
+  ui.print("(PAGO NO FIM DA CORRIDA)", 116, 164, Cores.cinza)
+  self.menu_proposta:desenhar()
+end
+
+local EXPLICA_MERCADO = {
+  minas = { "3 MINAS PARA SOLTAR ATRAS DE VOCE (BOTAO " .. Entrada.NOME.mina .. ").",
+            "A METRALHADORA E A UNICA ARMA DE FABRICA." },
+  espinhos = { "ESPINHOS NO PARA-CHOQUE: AS SUAS BATIDAS TIRAM 3X MAIS",
+               "VIDA DOS OUTROS, E AS DELES TIRAM A METADE DE VOCE." },
+  foguete = { "COMBUSTIVEL DE FOGUETE: O TURBO LARGA COM O DOBRO", "DE CARGA." },
+  sabotagem = { "UM CAPANGA MEXE NO CARRO DO RIVAL ESCOLHIDO:",
+                "ELE LARGA COM " .. C.SABOTAGEM_VIDA .. "% DE VIDA. (" .. Entrada.NOME.confirmar .. " TROCA O RIVAL)" },
+  correr = { "AS COMPRAS SO VALEM PARA ESTA CORRIDA E SAO PAGAS NO FIM", "DELA (SAINDO NO MEIO, NADA E COBRADO)." },
+  voltar = { "VOLTA PARA OS CARTAZES (AS COMPRAS FICAM DESMARCADAS).", "" },
+}
+
+function Tela:desenhar_mercado()
+  Menu.imagem("mural")
+  Menu.painel(16, 34, 448, 214)
+  self.menu_mercado:desenhar()
+  local o = self.menu_mercado:atual()
+  for i, l in ipairs(EXPLICA_MERCADO[o.explica] or {}) do ui.print(l, 30, 166 + i * 12, Cores.cinza_claro) end
+  local total = Campeonato.preco_compras(self.compras)
+  ui.print("TOTAL: " .. dinheiro(total), 30, 214, total > self.e.dinheiro and Cores.vermelho or Cores.amarelo)
+  ui.print("SEU DINHEIRO: " .. self.dinheiro, 200, 214, Cores.verde)
+  local r = self.compras.recompensa
+  if r then
+    ui.print(string.format("RECOMPENSA: DESTRUIR %s (+%s / -%s)", r.nome, dinheiro(r.valor), dinheiro(r.multa)), 30,
+      230, Cores.vermelho)
+  end
+  faixa_rodape()
+end
+
+function Tela:desenhar_agiota()
+  Menu.imagem("mural")
+  Menu.painel(40, 40, 400, 200, Cores.vermelho)
+  Texto.escrever("f2", "AGIOTA", 56, 48, "amarelo")
+  local e = self.e
+  if (e.divida_n or 0) > 0 then
+    ui.print(string.format("VOCE ME DEVE %s.", dinheiro(Campeonato.divida(e))), 56, 76, Cores.branco)
+    ui.print(string.format("O PRAZO VAI ATE A RODADA %d (FALTAM %d).", e.rodada + e.prazo, e.prazo), 56, 90, Cores.branco)
+    ui.print("SE NAO PAGAR, MEUS RAPAZES LEVAM TODO O SEU", 56, 112, Cores.vermelho)
+    ui.print("DINHEIRO E AS MELHORIAS DO CARRO.", 56, 124, Cores.vermelho)
+  else
+    ui.print("PRECISA DE DINHEIRO? EU EMPRESTO.", 56, 76, Cores.branco)
+    ui.print(string.format("DEVOLVA COM %d%% DE JUROS EM %d RODADAS.", (C.AGIOTA_JUROS - 1) * 100 // 1, C.AGIOTA_PRAZO),
+      56, 90, Cores.branco)
+    ui.print("SE NAO PAGAR NO PRAZO, MEUS RAPAZES LEVAM TODO O", 56, 112, Cores.vermelho)
+    ui.print("SEU DINHEIRO E AS MELHORIAS DO CARRO. UM POR VEZ.", 56, 124, Cores.vermelho)
+  end
+  self.menu_agiota:desenhar()
+  ui.print("SEU DINHEIRO: " .. self.dinheiro, 56, 222, Cores.verde)
+  faixa_rodape()
+end
+
 local TITULOS = { menu = "GARAGEM", corridas = "PR\xD3XIMA CORRIDA", oficina = "OFICINA",
-                  loja = "CONCESSION\xC1RIA", ranking = "RANKING", desafio = "DESAFIO FINAL" }
+                  loja = "CONCESSION\xC1RIA", ranking = "RANKING", desafio = "DESAFIO FINAL",
+                  proposta = "PR\xD3XIMA CORRIDA", mercado = "MERCADO NEGRO", agiota = "AGIOTA" }
 
 function Tela:desenhar()
   local modo = self.modo
@@ -361,6 +503,9 @@ function Tela:desenhar()
   elseif modo == "oficina" then self:desenhar_oficina()
   elseif modo == "loja" then self:desenhar_loja()
   elseif modo == "desafio" then self:desenhar_desafio()
+  elseif modo == "proposta" then self:desenhar_proposta()
+  elseif modo == "mercado" then self:desenhar_mercado()
+  elseif modo == "agiota" then self:desenhar_agiota()
   else self:desenhar_ranking() end
   Menu.cabecalho(TITULOS[modo], "RODADA " .. (self.e.rodada + 1) .. (modo == "menu" and "  " .. self.nivel or ""))
   if self.aviso_t > 0 then
