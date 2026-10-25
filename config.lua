@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.31"
+C.VERSAO = "0.32"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -55,9 +55,10 @@ C.RESGATE_PARADO = 4    -- segundos sem sair do lugar (menos de 6 px por segundo
 --   mina: 20 x (1024 - blindagem); batida: (1024 - blindagem) x (velocidade em px/quadro)^2, ate 10000
 --   blindagem = base do carro (120 a 350) + nivel comprado (360 a 600) + 100 do jogador, ate 900
 C.VIDA = 100
-C.DANO = 2.5            -- multiplica todo dano (tiro, mina, batida). v0.29: o Felipe achou os carros
-                        -- "tanques" (com 1: 0 a 0,3 rivais destruidos por corrida, ele nunca);
-                        -- com 2,5: ~1 rival por corrida, voce de vez em quando, dano medio ~50%
+C.DANO = 1.9            -- multiplica todo dano (tiro, mina, batida). v0.29: o Felipe achou os carros
+                        -- "tanques" (com 1: 0 a 0,3 rivais destruidos por corrida, ele nunca) e
+                        -- foi para 2,5 (~1,2 por corrida); v0.32: com 2,5 ele destruia os 3 em 2
+                        -- voltas: 1,9 (~0,8 por corrida no piloto automatico)
 C.KMH = 0.7             -- velocimetro: km/h por px/s (fusca ~136, puma ~161, com turbo ~260)
 C.ARMA_ALCANCE = 170    -- px (130 no Death Rally, x ESCALA)
 C.ARMA_FATOR = { 0.2, 0.95 }       -- arma 1 a 5 da ficha (carros.lua): 0,2 + 0,15 x tipo (0 a 5)
@@ -103,12 +104,13 @@ C.PONTOS_ABATE = 2
 -- dinheiro do jogador por corrida, pela dificuldade (o Death Rally paga ~750/375/187 nas faceis;
 -- aqui tudo multiplo de 100: o password guarda o dinheiro em centenas). A corrida rapida paga
 -- como a facil.
--- v0.29: x2,2 e o 4o lugar ganha metade do 3o (campeonato simulado: ferramentas/medir_campanha.py)
+-- v0.29: x2,2 e o 4o lugar ganha metade do 3o (campeonato simulado: ferramentas/medir_campanha.py);
+-- v0.32: +15% (com o dano menor, menos abates: sem isso o MEDIO nao fechava em 40 rodadas)
 C.PREMIOS = {
-  facil = { posicao = { 1800, 900, 400, 200 }, abate = 700, sobrevivente = 2000 },
-  medio = { posicao = { 3500, 1800, 900, 400 }, abate = 1100, sobrevivente = 4000 },
-  dificil = { posicao = { 7000, 3500, 1800, 900 }, abate = 1800, sobrevivente = 6000 },
-  final = { posicao = { 22000, 0, 0, 0 }, abate = 2200, sobrevivente = 10000 },
+  facil = { posicao = { 2000, 1000, 400, 200 }, abate = 800, sobrevivente = 2000 },
+  medio = { posicao = { 4000, 2000, 1000, 400 }, abate = 1200, sobrevivente = 4000 },
+  dificil = { posicao = { 8000, 4000, 2000, 1000 }, abate = 2000, sobrevivente = 6000 },
+  final = { posicao = { 25300, 0, 0, 0 }, abate = 2500, sobrevivente = 10000 },
 }
 -- modo historia (campeonato.lua): pontos do ranking por colocacao (+1 por abate), conserto por %
 -- de estrago (+1 a cada carro melhor) e o efeito das melhorias da oficina (por nivel, ate 3). A
