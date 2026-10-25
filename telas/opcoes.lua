@@ -7,9 +7,9 @@ local Tela = {}
 Tela.__index = Tela
 
 local menu = Menu.novo({
-  { texto = "FPS NO RODAPÉ", acao = function() Jogo.rodape = not Jogo.rodape end,
-    valor = function() return Jogo.rodape and "SIM" or "NÃO" end },
-  { texto = "TESTE DE BOTÕES", acao = function() Jogo.ir("teste") end },
+  { texto = "FPS NO RODAP\xC9", acao = function() Jogo.rodape = not Jogo.rodape end,
+    valor = function() return Jogo.rodape and "SIM" or "N\xC3O" end },
+  { texto = "TESTE DE BOT\xD5ES", acao = function() Jogo.ir("teste") end },
   { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end },
 }, 150, 100, 24, 230)
 
@@ -24,7 +24,7 @@ end
 
 function Tela:desenhar()
   Menu.fundo()
-  Menu.cabecalho("OPÇÕES")
+  Menu.cabecalho("OP\xC7\xD5ES")
   menu:desenhar()
   Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER   " .. Entrada.NOME.voltar .. ": VOLTAR")
 end

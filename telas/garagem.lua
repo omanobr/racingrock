@@ -1,6 +1,7 @@
 -- Garagem do modo historia: o seu carro, dinheiro, ranking e o PASSWORD; daqui sai para a
--- proxima corrida (3 a escolher), a oficina (melhorias), a concessionaria (carros), o ranking e,
--- no 1o lugar, o desafio final (campeonato.lua tem as regras).
+-- proxima corrida (3 a escolher, e as minas, compradas antes de cada corrida, como no Death
+-- Rally), a oficina (melhorias), a concessionaria (carros), o ranking e, no 1o lugar, o desafio
+-- final (campeonato.lua tem as regras).
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Carros = require "carros"
@@ -29,7 +30,7 @@ Tela.dinheiro = dinheiro
 local NOME_DIFICULDADE = { facil = "F\xC1CIL", medio = "M\xC9DIA", dificil = "DIF\xCDCIL" }
 
 function Tela.nova()
-  local t = setmetatable({ modo = "menu", aviso = nil, aviso_t = 0, confirmar = nil }, Tela)
+  local t = setmetatable({ modo = "menu", aviso = nil, aviso_t = 0, confirmar = nil, minas = false }, Tela)
   t.e = Jogo.campeonato
   t:montar()
   return t
@@ -50,6 +51,7 @@ function Tela:montar()
   self.lider = pos == 1 and "O ADVERSARIO TE ESPERA!"
     or string.format("LIDER: %s (%d)", lider.nome, lider.pontos)
   self.senha = Campeonato.senha_bonita(e)
+  self.nivel = "RIVAIS " .. Campeonato.nivel(e).id:upper()
   self.rank = rank
   self.corridas = Campeonato.corridas(e)
 
@@ -72,8 +74,13 @@ function Tela:montar()
   for _, c in ipairs(self.corridas) do
     lista[#lista + 1] = { texto = NOME_DIFICULDADE[c.dificuldade.id] or c.dificuldade.nome, acao = function() self:correr(c) end }
   end
+  -- minas: so a metralhadora vem de fabrica; o pacote vale para a proxima corrida
+  lista[#lista + 1] = { texto = "MINAS", valor = function() return self.minas and "SIM" or "N\xC3O" end,
+                        acao = function() self.minas = not self.minas end }
   lista[#lista + 1] = { texto = "VOLTAR", acao = function() self:ir("menu") end }
+  local esc_corridas = self.menu_corridas and self.menu_corridas.escolha or 1
   self.menu_corridas = Menu.novo(lista, 44, 40, 22, 150)
+  self.menu_corridas.escolha = esc_corridas
 
   -- oficina
   local of = {}
@@ -139,7 +146,11 @@ function Tela:comprar_carro(i)
 end
 
 function Tela:correr(corrida)
-  Jogo.ir("corrida", Campeonato.opcoes_da_corrida(self.e, corrida))
+  if self.minas and self.e.dinheiro < C.PRECO_MINAS then
+    self:avisar("DINHEIRO INSUFICIENTE PARA AS MINAS")
+    return
+  end
+  Jogo.ir("corrida", Campeonato.opcoes_da_corrida(self.e, corrida, self.minas))
 end
 
 function Tela:atualizar()
@@ -181,8 +192,9 @@ end
 
 function Tela:desenhar_corridas()
   self.menu_corridas:desenhar()
-  local c = self.corridas[self.menu_corridas.escolha]
-  if not c then return end
+  -- a corrida escolhida (nas opcoes MINAS e VOLTAR, a ultima que estava escolhida)
+  local c = self.corridas[self.menu_corridas.escolha] or self.ultima_corrida or self.corridas[1]
+  self.ultima_corrida = c
   local P = C.PREMIOS[c.dificuldade.id]
   local pts = C.PONTOS_RANKING[c.dificuldade.id]
   local pista = Pista.LISTA[c.pista]
@@ -200,8 +212,11 @@ function Tela:desenhar_corridas()
   ui.print("RIVAIS:", 22, y + 32, Cores.cinza_claro)
   for k, i in ipairs(c.rivais) do
     local p = Campeonato.PILOTOS[i]
-    ui.print(string.format("%-10s %s", p[1], Carros[Carros.indice(p[2])].nome), 82, y + 32 + (k - 1) * 13, Cores.branco)
+    ui.print(string.format("%-10s %s", p[1], Carros[Carros.indice(c.carros[k])].nome), 82, y + 32 + (k - 1) * 13,
+      Cores.branco)
   end
+  ui.print(string.format("MINAS: 3 POR %s, SO PARA ESTA CORRIDA", dinheiro(C.PRECO_MINAS)), 22, y + 76,
+    self.minas and Cores.verde or Cores.cinza)
 end
 
 function Tela:desenhar_oficina()
@@ -241,7 +256,7 @@ function Tela:desenhar_ranking()
     local x, y = 40 + col * 210, 40 + lin * 17
     if l.jogador then ui.rectfill(x - 6, y - 4, x + 183, y + 10, Cores.vinho) end
     local cor = l.jogador and Cores.amarelo or Cores.branco
-    ui.print(string.format("%2d. %-10s %3d PONTOS", i, l.nome, l.pontos), x, y, cor)
+    ui.print(string.format("%2d. %-10s %-7s %3d PTS", i, l.nome, Carros[l.carro].nome, l.pontos), x, y, cor)
   end
   Menu.centro("1o LUGAR DO RANKING: ABRE O DESAFIO FINAL CONTRA O ADVERSARIO", 222, Cores.cinza_claro)
 end
@@ -251,7 +266,7 @@ local TITULOS = { menu = "GARAGEM", corridas = "PR\xD3XIMA CORRIDA", oficina = "
 
 function Tela:desenhar()
   Menu.fundo()
-  Menu.cabecalho(TITULOS[self.modo], "RODADA " .. (self.e.rodada + 1))
+  Menu.cabecalho(TITULOS[self.modo], "RODADA " .. (self.e.rodada + 1) .. (self.modo == "menu" and "  " .. self.nivel or ""))
   local modo = self.modo
   if modo == "menu" then self:desenhar_menu()
   elseif modo == "corridas" then self:desenhar_corridas()

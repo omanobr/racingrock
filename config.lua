@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.26"
+C.VERSAO = "0.27"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4
@@ -67,7 +67,8 @@ C.BATIDA_MAX = 10000
 C.BATIDA_MIN = 40       -- batida mais devagar que isso (px/s) nao tira vida
 C.MUNICAO = 6           -- segundos de tiro no comeco da corrida (5,6 s no Death Rally)
 C.MUNICAO_ITEM = 4      -- segundos a mais por caixa de municao
-C.MINAS = 3             -- minas por corrida
+C.MINAS = 3             -- minas de um pacote (modo historia: compradas antes da corrida)
+C.PRECO_MINAS = 400     -- o pacote, no modo historia
 C.MINA_FREIA = -0.5     -- velocidade x isto (o Death Rally usa -0.7)
 C.MINA_GIRO = math.rad(25)   -- gira ate isto para um lado
 C.MINA_ARMA = 1.0       -- segundos ate a mina valer para quem soltou
@@ -84,12 +85,12 @@ C.PREMIOS = {
   dificil = { posicao = { 3200, 1600, 800, 0 }, abate = 800, sobrevivente = 3000 },
   final = { posicao = { 10000, 0, 0, 0 }, abate = 1000, sobrevivente = 5000 },
 }
--- modo historia (campeonato.lua): pontos do ranking por colocacao (+1 por abate), potencia dos
--- rivais (x a ficha do carro deles), conserto por % de estrago (+1 a cada carro melhor) e o
--- efeito das melhorias da oficina (por nivel, ate 3)
+-- modo historia (campeonato.lua): pontos do ranking por colocacao (+1 por abate), conserto por %
+-- de estrago (+1 a cada carro melhor) e o efeito das melhorias da oficina (por nivel, ate 3). A
+-- dificuldade da corrida (facil, media, dificil) so muda os carros que entram (Campeonato.
+-- DIFICULDADES), o premio e os pontos: a pilotagem e a ficha dos rivais vem do nivel (C.NIVEIS).
 C.PONTOS_RANKING = { facil = { 3, 2, 1, 0 }, medio = { 5, 3, 2, 0 }, dificil = { 8, 5, 3, 1 }, final = { 0, 0, 0, 0 } }
 C.PONTOS_RANKING_ABATE = 1
-C.CAMPEONATO_FATOR = { facil = 0.86, medio = 0.94, dificil = 1.0, final = 1.03 }
 C.CONSERTO_POR_PCT = 6
 C.MELHORIA_MOTOR = 0.04        -- potencia +4% por nivel
 C.MELHORIA_PNEU = 0.035        -- escorregamento -0,035 por nivel
@@ -105,23 +106,50 @@ C.IA_MINA_ESPERA = 5    -- segundos entre uma mina e outra do computador
 C.IA_TIRO_INICIO = 4    -- o computador nao atira nos primeiros segundos (todos colados na largada)
 C.IA_RAJADA = { 0.5, 1.0 }   -- o computador atira em rajadas de 0,5 a 1 s...
 C.IA_PAUSA = { 0.6, 1.6 }    -- ...com pausas de 0,6 a 1,6 s
-C.IA_ERRO_MIRA = math.rad(7) -- e mira com um erro sorteado a cada rajada (a 100 px: ate 12 px)
+-- e mira com um erro sorteado a cada rajada, ate o "mira" do nivel (C.NIVEIS)
 
--- Carros do computador
+-- Carros do computador (ia.lua)
 C.IA_OLHAR = 3          -- pontos da linha central a frente (16 px cada), + 1 a cada IA_OLHAR_VEL px/s
 C.IA_OLHAR_VEL = 60 * C.ESCALA
-C.IA_CURVA = 0.40       -- na curva fechada a velocidade alvo cai 40%
 C.IA_ZONA_MORTA = 0.06  -- radianos: nao mexe o volante se o erro for menor
-C.IA_ELASTICO = {       -- potencia (M) x este fator conforme a distancia para o jogador (pontos de 16 px)
-  atras_longe = 1.12, atras = 1.06, frente = 0.95, frente_longe = 0.88, longe = 40,
+C.IA_RUMO_VEL = 40      -- acima disso (px/s) mira pela direcao em que o carro anda, nao pelo bico
+-- linha de corrida: por dentro das curvas, IA_LINHA x o quanto a pista vira em +-IA_LINHA_JANELA
+-- pontos (fracao da meia largura, ate IA_LINHA_MAX), a IA_MARGEM px do muro, no minimo
+C.IA_LINHA = 0.8
+C.IA_LINHA_MAX = 0.6
+C.IA_LINHA_JANELA = 4
+C.IA_MARGEM = 14
+C.IA_AFASTA = 0.3       -- raspou no muro: vai para o outro lado (fracao da meia largura), sumindo em ~1 s
+C.IA_ELASTICO_LONGE = 40   -- elastico: a mais de 40 pontos (640 px) do jogador e "longe"
+-- Nivel dos pilotos do computador (escolhido no comeco do modo historia, para o campeonato
+-- inteiro, e na corrida rapida; ideia do Felipe).
+--   fator: multiplica TODA a ficha do carro deles (velocidade, arranque, aderencia, blindagem e
+--     arma); no DIFICIL o fusca deles chega a ~137 km/h e o seu a ~130
+--   mira: erro maximo do tiro, sorteado a cada rajada (a 100 px, 7 graus = 12 px: erra metade
+--     dos tiros de longe); pausa: x as pausas entre as rajadas (no DIFICIL quase nao erra e atira
+--     mais)
+--   curva: quanto tiram o pe nas curvas (0 = nada); faixa: quanto se afastam da linha de corrida
+--   turbo_reta: pontos de reta (16 px) que esperam ter pela frente para usar o turbo
+--   elastico: potencia x isto quando o computador esta atras do jogador (longe: a mais de
+--     IA_ELASTICO_LONGE pontos). So ajuda quem esta atras (pedido do Felipe): na frente nao perde
+--     nada, senao um fusca alcanca um puma
+--   minas: quantos dos 3 rivais do modo historia levam um pacote de minas
+C.NIVEIS = {
+  { id = "facil", nome = "F\xC1CIL", fator = 0.95, curva = 0.3, faixa = 0.3, turbo_reta = 16,
+    elastico = { atras = 1.02, atras_longe = 1.05 }, minas = 0, mira = math.rad(12), pausa = 1.3 },
+  { id = "medio", nome = "M\xC9DIO", fator = 1.0, curva = 0.1, faixa = 0.15, turbo_reta = 12,
+    elastico = { atras = 1.04, atras_longe = 1.08 }, minas = 1, mira = math.rad(6), pausa = 1.0 },
+  { id = "dificil", nome = "DIF\xCDCIL", fator = 1.05, curva = 0.0, faixa = 0.1, turbo_reta = 10,
+    elastico = { atras = 1.06, atras_longe = 1.12 }, minas = 2, mira = math.rad(1.5), pausa = 0.7 },
 }
+C.NIVEL = 2             -- nivel da corrida rapida (o menu troca)
 -- Carros com personalidade (ideia do Felipe): a ficha de cada modelo (carros.lua, notas 1 a 5)
 -- vira os numeros da fisica. Nota 1 -> o primeiro valor, nota 5 -> o segundo.
 C.FICHA_M = { 2.75, 3.25 }          -- velocidade: potencia M (velocidade final ~54*M px/s)
 C.FICHA_ARRANQUE = { 0.8, 1.3 }     -- aceleracao: forca parado (perto da velocidade final vale 1:
                                     -- muda o quanto demora para chegar la, nao a final)
 C.FICHA_ADERENCIA = { 0.42, 0.18 }  -- aderencia: escorregamento do pneu (Death Rally: 0.5 o pior, 0.1 o melhor)
-C.IA_FATOR_M = { 0.95, 0.98, 1.01 } -- os 3 do computador: potencia do modelo x isto (o elastico ajusta)
+C.IA_FATOR_M = { 0.97, 0.99, 1.01 } -- os 3 do computador: potencia do modelo x isto (variedade)
 C.ADERENCIA = 0.3       -- escorregamento de quem nao tem ficha
 -- tracao, acelerando com o volante virado (acima de TRACAO_VEL px/s):
 --   traseira: a traseira sai (gira mais e escorrega mais: da para fazer drift no acelerador)
@@ -134,7 +162,7 @@ C.ADERENCIA = 0.3       -- escorregamento de quem nao tem ficha
 -- certa (de traseira, mais cedo, senao roda)
 C.TRACAO_VEL = 60 * C.ESCALA
 C.TRACAO = {
-  traseira = { giro = 1.1, deslize = 1.4, deslize_max = 1.25, giro_solto = 1.0, alivia = 0.2, arranque = 1.15 },
+  traseira = { giro = 1.1, deslize = 1.1, deslize_max = 1.05, giro_solto = 1.0, alivia = 0.2, arranque = 1.15 },
   dianteira = { giro = 0.85, deslize = 0.8, deslize_max = 1.0, giro_solto = 1.08, alivia = 0.3, arranque = 1.0 },
   integral = { giro = 1.0, deslize = 0.8, deslize_max = 0.9, giro_solto = 1.0, alivia = 0.3, arranque = 1.1 },
 }

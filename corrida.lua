@@ -30,17 +30,23 @@ local function modelos(do_jogador)
 end
 
 -- opcoes: { pista = n, voltas = n, autopiloto = bool, modelo = id do carro do jogador,
---   e no modo historia (campeonato.lua): rivais = { { nome, modelo, fator, blindagem }, ... },
+--   nivel = 1..3 (C.NIVEIS: o computador), minas = do jogador, minas_rivais = de cada rival,
+--   e no modo historia (campeonato.lua): rivais = { { nome, modelo, fator, blindagem, minas }, ... },
 --   melhorias = { motor, pneus, blindagem } do jogador, dificuldade = "facil"..., campeonato }
+-- As minas nao vem de fabrica (pedido do Felipe, como no Death Rally): so a metralhadora. No modo
+-- historia o jogador compra antes da corrida.
 function Corrida.nova(opcoes)
   local r = setmetatable({}, Corrida)
   r.pista = Pista.carregar(opcoes.pista or 1)
+  IA.pista(r.pista)
   -- mapinha do painel (ferramentas/gerar_interface.py)
   local mapa = require("dados_interface").mapas[r.pista.id]
   if mapa and Sprites.img.mapa then
     r.mapa = { img = Sprites.img.mapa[r.pista.id], escala = mapa.escala, w = mapa.w, h = mapa.h }
   end
   r.voltas = opcoes.voltas or C.VOLTAS
+  r.nivel = C.NIVEIS[opcoes.nivel or C.NIVEL] or C.NIVEIS[2]
+  r.preco_minas = opcoes.preco_minas
   r.dificuldade = opcoes.dificuldade or "facil"
   r.campeonato = opcoes.campeonato
   r.estado = "contagem"
@@ -63,12 +69,15 @@ function Corrida.nova(opcoes)
     local rival = rivais and rivais[i - 1]
     local fator = i == 1 and 1 + C.MELHORIA_MOTOR * (mel.motor or 0) or C.IA_FATOR_M[i - 1]
     if rival then fator = C.IA_FATOR_M[i - 1] * rival.fator end
-    local ader = Carros.escala(m.aderencia, C.FICHA_ADERENCIA)
+    -- nivel do computador: a ficha inteira do carro dele x nivel.fator (a blindagem e a arma em
+    -- combate.lua)
+    local nivel = i == 1 and 1 or r.nivel.fator
+    local ader = Carros.escala(m.aderencia, C.FICHA_ADERENCIA) / nivel
     if i == 1 then ader = math.max(0.1, ader - C.MELHORIA_PNEU * (mel.pneus or 0)) end
     local c = Carro.novo({
       x = g[1], y = g[2], ang = g[3],
-      M = Carros.escala(m.velocidade, C.FICHA_M) * fator,
-      arranque = Carros.escala(m.aceleracao, C.FICHA_ARRANQUE),
+      M = Carros.escala(m.velocidade, C.FICHA_M) * fator * nivel,
+      arranque = Carros.escala(m.aceleracao, C.FICHA_ARRANQUE) * nivel,
       aderencia = ader,
       tracao = m.tracao,
       nome = i == 1 and "VOCE" or (rival and rival.nome or m.nome), humano = i == 1, modelo = m.id,
@@ -77,11 +86,15 @@ function Corrida.nova(opcoes)
     c.modelo = m
     c.cor = CORES[i]
     c.nivel_blindagem = i == 1 and (mel.blindagem or 0) or (rival and rival.blindagem or 0)
+    c.fator_nivel = nivel
+    if i == 1 then c.minas_iniciais = opcoes.minas or 0
+    else c.minas_iniciais = rival and rival.minas or opcoes.minas_rivais or 0 end
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada
     c.progresso = c.idx - p.n
     c.posicao = i
-    if not c.humano or opcoes.autopiloto then IA.preparar(c); c.ia = true end
+    if not c.humano then IA.preparar(c, r.nivel); c.ia = true
+    elseif opcoes.autopiloto then IA.preparar(c); c.ia = true end
     r.carros[i] = c
   end
   r.jogador = r.carros[1]
@@ -164,14 +177,14 @@ function Corrida:resgatar(c)
 end
 
 -- ultima garantia contra carro preso: a cada segundo ve quanto ele andou; parado muito tempo
--- com o pedal apertado, volta para a pista
+-- com o pedal apertado (o computador sempre quer andar), volta para a pista
 function Corrida:parado(c, dt)
   c.relogio_parado = (c.relogio_parado or 0) + dt
   if c.relogio_parado < 1 then return end
   c.relogio_parado = 0
   local x, y = c.marca_x or c.x, c.marca_y or c.y
   c.marca_x, c.marca_y = c.x, c.y
-  if (c.acel or c.freio) and (c.x - x) ^ 2 + (c.y - y) ^ 2 < 36 then
+  if (c.acel or c.freio or c.ia) and (c.x - x) ^ 2 + (c.y - y) ^ 2 < 36 then
     c.segundos_parado = (c.segundos_parado or 0) + 1
     if c.segundos_parado >= C.RESGATE_PARADO then self:resgatar(c) end
   else
@@ -231,16 +244,17 @@ function Corrida:classificar()
 end
 
 -- elastico (como no Death Rally): o motor do computador fica mais forte quando ele esta atras do
--- jogador e mais fraco quando esta muito na frente (carro.lua multiplica a potencia M)
+-- jogador (carro.lua multiplica a potencia M), para a corrida nao ficar facil. Ate a v0.26 tambem
+-- ficava 12% mais fraco quando estava longe na frente: um fusca alcancava um puma (o Felipe ganhou
+-- de um puma com o fusca sem melhorias). Agora na frente ele corre com o carro que tem.
 function Corrida:elastico()
-  local E, j = C.IA_ELASTICO, self.jogador
+  local E, j, longe = self.nivel.elastico, self.jogador, C.IA_ELASTICO_LONGE
   for i = 2, #self.carros do
     local c = self.carros[i]
     local d = c.progresso - j.progresso
-    if d < -E.longe then c.elastico = E.atras_longe
+    if d < -longe then c.elastico = E.atras_longe
     elseif d < 0 then c.elastico = E.atras
-    elseif d > E.longe then c.elastico = E.frente_longe
-    else c.elastico = E.frente end
+    else c.elastico = 1 end
   end
 end
 

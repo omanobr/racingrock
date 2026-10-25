@@ -9,6 +9,8 @@
 -- cima, a "mascara", cobrindo os LEDs apagados. (Com ui.clip tambem daria, mas cortar imagem de
 -- lado e o que o console desenha errado na borda da tela; o retangulo e seguro.)
 -- Os textos so sao montados quando o valor muda (string.format todo quadro pesa no console).
+-- Os numeros grandes vem de img/ui/painel (so algarismos, ~9 KB): cada folha desenhada e lida
+-- inteira do cartao naquele quadro, e as fontes f2 e f3 inteiras eram ~54 KB.
 local C = require "config"
 local Cores = require "cores"
 local Texto = require "texto"
@@ -51,7 +53,29 @@ local function aviso(s, borda)
   Texto.escrever("f3", s, 240 - w // 2, 57, "amarelo")
 end
 
-local F3, F2 = D.f3, D.f2
+local P = D.painel
+
+-- n (inteiro >= 0) em algarismos pequenos do painel, a partir de x; devolve o x depois dele
+local function numero(img, n, x, y)
+  local d = 1
+  while d * 10 <= n do d = d * 10 end
+  repeat
+    tile(img, P.f2 + n // d % 10, x, y)
+    x = x + P.avanco
+    d = d // 10
+  until d == 0
+  return x
+end
+
+-- n alinhado a direita (o ultimo algarismo termina em x_dir)
+local function numero_dir(img, n, x_dir, y)
+  local x = x_dir - P.avanco
+  repeat
+    tile(img, P.f2 + n % 10, x, y)
+    n = n // 10
+    x = x - P.avanco
+  until n == 0
+end
 
 function Hud.desenhar(corrida)
   local j = corrida.jogador
@@ -72,14 +96,16 @@ function Hud.desenhar(corrida)
   painel(4, 219, 150, 49)                     -- vida, municao e minas
   painel(324, 219, 152, 49)                   -- velocimetro e turbo
 
-  -- f3: posicao
-  tile(ui_img.f3, F3.cores.amarelo + F3.letras[48 + j.posicao % 10], 9, 10)
-  -- f2: ordinal, volta e km/h
-  tile(ui_img.f2, F2.cores.amarelo + F2.letras[0xBA], 25, 8)
+  -- numeros (img/ui/painel): posicao, ordinal, volta e km/h
+  local pn = ui_img.painel
+  tile(pn, P.f3 + j.posicao % 10, 9, 10)
+  tile(pn, P.ordinal, 25, 8)
   local volta = j.volta < 1 and 1 or (j.volta > corrida.voltas and corrida.voltas or j.volta)
-  Texto.escrever("f2", texto("volta", volta, "%d/%d", volta, corrida.voltas), 50, 17, "branco")
+  local x = numero(pn, volta, 50, 17)
+  tile(pn, P.barra, x, 17)
+  numero(pn, corrida.voltas, x + P.avanco, 17)
   local v = j.v > 0 and j.v or -j.v
-  Texto.numero("f2", (v * C.KMH) // 1, 410, 222, "branco")
+  numero_dir(pn, (v * C.KMH) // 1, 410, 222)
   -- mapinha
   if m then ui.spr(m.img, mx, 6) end
   -- icones: conserto, municao, minas

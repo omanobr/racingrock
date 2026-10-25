@@ -1,5 +1,5 @@
--- Corrida rapida: escolhe a pista e o carro e corre (sem campeonato). A direita, o mapinha da
--- pista e o carro em 3/4 com a ficha.
+-- Corrida rapida: escolhe a pista, o carro, o nivel dos rivais e se todos levam minas, e corre
+-- (sem campeonato). A direita, o mapinha da pista e o carro em 3/4 com a ficha.
 local C = require "config"
 local Entrada = require "entrada"
 local Cores = require "cores"
@@ -47,10 +47,18 @@ function Tela.mapa(id, cx, y)
   if d then ui.spr(Sprites.img.mapa[id], cx - d.w // 2, y) end
 end
 
+local minas = false     -- todos levam um pacote de minas?
+
 local menu = Menu.novo({
-  { texto = "CORRER", acao = function() Jogo.ir("corrida", { pista = C.PISTA, voltas = Pista.LISTA[C.PISTA].voltas }) end },
+  { texto = "CORRER", acao = function()
+    local n = minas and C.MINAS or 0
+    Jogo.ir("corrida", { pista = C.PISTA, voltas = Pista.LISTA[C.PISTA].voltas, nivel = C.NIVEL, minas = n,
+                         minas_rivais = n })
+  end },
   { texto = "PISTA", acao = function() C.PISTA = C.PISTA % Pista.quantas() + 1 end },
   { texto = "CARRO", acao = function() C.MODELO = Carros[Carros.indice(C.MODELO) % #Carros + 1].id end },
+  { texto = "N\xCDVEL", acao = function() C.NIVEL = C.NIVEL % #C.NIVEIS + 1 end },
+  { texto = "MINAS", acao = function() minas = not minas end },
   { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end },
 }, 52, 56, 24, 150)
 
@@ -81,6 +89,11 @@ function Tela:desenhar()
   Texto.escrever("f2", m.nome, 204, 152, "amarelo")
   Tela.ficha_barras(m, 204, 174)
   Tela.carro(m, 400, 228)
+  -- nivel e minas
+  Menu.painel(16, 206, 172, 38)
+  ui.print("RIVAIS: " .. C.NIVEIS[C.NIVEL].id:upper(), 24, 212, Cores.branco)
+  ui.print(minas and "MINAS: 3 PARA CADA UM" or "MINAS: NAO (SO METRALHADORA)", 24, 226,
+    minas and Cores.verde or Cores.cinza_claro)
   Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER/TROCAR   " .. Entrada.NOME.voltar .. ": VOLTAR")
 end
 

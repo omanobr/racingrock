@@ -39,6 +39,7 @@ function Tela.nova(corrida)
   if corrida.campeonato and e then
     local antes = Campeonato.posicao(e)
     local res = Campeonato.aplicar(e, corrida, total)
+    if res.minas > 0 then t.premios[#t.premios + 1] = { string.format("%-24s-$%6d", "MINAS", res.minas), Cores.vermelho } end
     if res.conserto > 0 then t.premios[#t.premios + 1] = { string.format("%-24s-$%6d", "CONSERTO DO CARRO", res.conserto), Cores.vermelho } end
     t.total = string.format("%-24s $%6d", "VOCE TEM AGORA", e.dinheiro)
     local depois = Campeonato.posicao(e)

@@ -30,6 +30,8 @@ return {
       agudo = 50, grave = 51, circ = 52, til = 53, cedilha = 54,
     },
   },
+  -- numeros do painel da corrida (img/ui/painel): f3 = algarismos grandes, f2 = pequenos
+  painel = { f3 = 0, f2 = 10, barra = 20, ordinal = 21, avanco = 12 },
   barras = { velocidade = 0, velocidade_contorno = 1, vida = 2, municao = 3, turbo = 4,
              vel_x = 2, vel_leds = 34, vel_y = 1, vel_h = 12, barra_w = 100, barra_h = 7, leds = 24 },
   mapas = {

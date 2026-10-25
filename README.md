@@ -2,7 +2,7 @@
 
 Corrida de combate vista de cima, no estilo do **Death Rally** (1996), para o console **Lupi**.
 
-> Versão 0.26: painel da corrida e menus novos (velocímetro, mapinha, letras grandes com acento, carros em 3/4). Versão 0.25: **modo história** (campeonato com ranking de 20 pilotos, oficina, concessionária, desafio final e password de 8 letras para continuar depois), corrida rápida, 6 pistas, 9 carros com personalidade (velocidade, aceleração, aderência e tração), física no jeito do Death Rally e combate: metralhadora, minas, vida, carros destruídos e itens na pista.
+> Versão 0.27: corrida mais leve (fundo em tiras), computador muito melhor (linha de corrida, turbo, mira por nível), nível dos rivais no modo história, minas compradas antes da corrida e rivais que trocam de carro. Versão 0.26: painel da corrida e menus novos (velocímetro, mapinha, letras grandes com acento, carros em 3/4). Versão 0.25: **modo história** (campeonato com ranking de 20 pilotos, oficina, concessionária, desafio final e password de 8 letras para continuar depois), corrida rápida, 6 pistas, 9 carros com personalidade (velocidade, aceleração, aderência e tração), física no jeito do Death Rally e combate: metralhadora, minas, vida, carros destruídos e itens na pista.
 
 ## Como jogar
 

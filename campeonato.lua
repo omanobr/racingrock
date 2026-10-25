@@ -3,6 +3,15 @@
 -- media, dificil), ganha dinheiro e pontos, conserta o carro, compra melhorias e carros novos.
 -- No 1o lugar do ranking, abre o desafio final contra O ADVERSARIO, o dono da liga.
 --
+-- O nivel dos rivais (facil, normal, dificil: C.NIVEIS) e escolhido no NOVO JOGO e vale o
+-- campeonato inteiro (vai no password). A dificuldade de cada corrida so escolhe os carros que
+-- entram (pedido do Felipe): na facil ate o corsa, na media ate o monza, na dificil monza, opala
+-- e puma; o premio e os pontos sobem junto.
+--
+-- Os rivais tambem trocam de carro (ideia do Felipe: senao o do fusca anda de fusca para sempre):
+-- cada um "compra" um carro melhor a cada RIVAL_PONTOS_CARRO pontos que ganha no campeonato. Como
+-- os pontos deles saem da rodada, o carro tambem sai, e o password nao precisa guardar nada.
+--
 -- O console nao grava nada (desligou, perdeu): o progresso inteiro cabe num PASSWORD de 8
 -- letras, estilo Super Nintendo (Rock n' Roll Racing, Biker Mice from Mars). Para caber, o
 -- ranking dos outros 19 pilotos nao e guardado: os pontos deles dependem so da rodada (cada
@@ -41,13 +50,20 @@ Campeonato.PILOTOS = {
   { "RATO", "fusca", 2, 0.7 },
   { "MANCHA", "uno", 1, 0.6 },
 }
-Campeonato.CHEFE = { nome = "ADVERSARIO", modelo = "puma", fator = 1.2, blindagem = 3 }
+-- o chefe: um puma com o motor um pouco acima do seu no nivel 3 da oficina (+12%), e pilota como
+-- o nivel escolhido
+Campeonato.CHEFE = { nome = "ADVERSARIO", modelo = "puma", fator = 1.15, blindagem = 3 }
 
+-- rivais: da 13a a 19a posicao do ranking na facil, 7a-12a na media, 1a-6a na dificil. carros:
+-- do pior ao melhor que pode entrar (indices em carros.lua: 1 fusca ... 5 corsa, 7 monza, 9 puma);
+-- o carro do rival e puxado para dentro da faixa (com um melhor, ele vem com um emprestado)
 Campeonato.DIFICULDADES = {
-  { id = "facil", nome = "FACIL", rivais = { 13, 19 } },     -- rivais da 13a a 19a posicao do ranking
-  { id = "medio", nome = "MEDIA", rivais = { 7, 12 } },
-  { id = "dificil", nome = "DIFICIL", rivais = { 1, 6 } },
+  { id = "facil", nome = "FACIL", rivais = { 13, 19 }, carros = { 1, 5 } },
+  { id = "medio", nome = "MEDIA", rivais = { 7, 12 }, carros = { 4, 7 } },
+  { id = "dificil", nome = "DIFICIL", rivais = { 1, 6 }, carros = { 7, 9 } },
 }
+local CARROS_FINAL = { 8, 9 }
+local RIVAL_PONTOS_CARRO = 8
 
 -- precos (multiplos de 100: o password guarda o dinheiro em centenas)
 Campeonato.PRECO_CARRO = { fusca = 0, uno = 3000, ka = 4000, saveiro = 6000, corsa = 9000, focus = 13000,
@@ -58,9 +74,12 @@ local PRECO_MELHORIA = { 800, 1600, 3200 }     -- nivel 1, 2, 3 no fusca; carros
 Campeonato.MAX_NIVEL = 3
 Campeonato.DINHEIRO_MAX = 1023 * 100
 
-function Campeonato.novo()
-  return { carro = 1, motor = 0, pneus = 0, blindagem = 0, dinheiro = 500, rodada = 0, pontos = 0 }
+-- nivel: 1 a 3 (C.NIVEIS)
+function Campeonato.novo(nivel)
+  return { carro = 1, motor = 0, pneus = 0, blindagem = 0, dinheiro = 500, rodada = 0, pontos = 0, nivel = nivel or 2 }
 end
+
+function Campeonato.nivel(e) return C.NIVEIS[e.nivel or 2] or C.NIVEIS[2] end
 
 function Campeonato.modelo(e) return Carros[e.carro] end
 
@@ -80,13 +99,15 @@ local function pontos_do_rival(i, rodada)
   return floor(p[3] + p[4] * rodada + (sorteio(i, rodada) % 100) / 100 * 2)
 end
 
--- os 20 (19 rivais + voce), do 1o ao ultimo: { nome, pontos, rival (indice) ou jogador = true }
+-- os 20 (19 rivais + voce), do 1o ao ultimo: { nome, pontos, carro (indice), rival (indice) ou
+-- jogador = true }
 function Campeonato.ranking(e)
   local lista = {}
   for i = 1, #Campeonato.PILOTOS do
-    lista[#lista + 1] = { nome = Campeonato.PILOTOS[i][1], pontos = pontos_do_rival(i, e.rodada), rival = i }
+    lista[#lista + 1] = { nome = Campeonato.PILOTOS[i][1], pontos = pontos_do_rival(i, e.rodada), rival = i,
+                          carro = Campeonato.carro_do_rival(i, e.rodada) }
   end
-  lista[#lista + 1] = { nome = "VOCE", pontos = e.pontos, jogador = true }
+  lista[#lista + 1] = { nome = "VOCE", pontos = e.pontos, jogador = true, carro = e.carro }
   -- empate: voce fica atras (tem de passar de verdade)
   table.sort(lista, function(a, b)
     if a.pontos ~= b.pontos then return a.pontos > b.pontos end
@@ -116,7 +137,23 @@ end
 -- a estreia em pistas faceis de entender: gramado, deserto e porto (indices em pistas/lista.lua)
 local PRIMEIRA_RODADA = { 2, 4, 3 }
 
--- as 3 corridas da rodada: { dificuldade, pista (indice no menu), rivais = { indices dos rivais } }
+-- o carro do rival i na rodada (indice em carros.lua): o do comeco, mais um a cada
+-- RIVAL_PONTOS_CARRO pontos ganhos desde a 1a rodada
+function Campeonato.carro_do_rival(i, rodada)
+  local ganhos = pontos_do_rival(i, rodada) - pontos_do_rival(i, 0)
+  local k = Carros.indice(Campeonato.PILOTOS[i][2]) + ganhos // RIVAL_PONTOS_CARRO
+  return k > #Carros and #Carros or k
+end
+
+-- o carro (id) do rival i numa corrida que aceita os carros da faixa { pior, melhor }
+local function carro_na_corrida(i, rodada, faixa)
+  local k = Campeonato.carro_do_rival(i, rodada)
+  if k < faixa[1] then k = faixa[1] elseif k > faixa[2] then k = faixa[2] end
+  return Carros[k].id
+end
+
+-- as 3 corridas da rodada: { dificuldade, pista (indice no menu), rivais = { indices dos rivais },
+-- carros = { modelo de cada rival } }
 function Campeonato.corridas(e)
   local rank = Campeonato.ranking(e)
   local rivais_por_posicao = {}
@@ -135,7 +172,9 @@ function Campeonato.corridas(e)
     end
     local pista = ps[sorteio(e.rodada, d + 10) % #ps + 1]
     if e.rodada == 0 then pista = PRIMEIRA_RODADA[d] end
-    lista[d] = { dificuldade = dif, pista = pista, rivais = escolhidos }
+    local carros = {}
+    for k, i in ipairs(escolhidos) do carros[k] = carro_na_corrida(i, e.rodada, dif.carros) end
+    lista[d] = { dificuldade = dif, pista = pista, rivais = escolhidos, carros = carros }
   end
   return lista
 end
@@ -143,29 +182,38 @@ end
 -- o desafio final: O ADVERSARIO e os 2 primeiros do ranking, na pista do porto
 function Campeonato.desafio(e)
   local rank = Campeonato.ranking(e)
-  local rivais = {}
+  local rivais, carros = {}, {}
   for _, l in ipairs(rank) do
-    if l.rival and #rivais < 2 then rivais[#rivais + 1] = l.rival end
+    if l.rival and #rivais < 2 then
+      rivais[#rivais + 1] = l.rival
+      carros[#carros + 1] = carro_na_corrida(l.rival, e.rodada, CARROS_FINAL)
+    end
   end
-  return { dificuldade = { id = "final", nome = "DESAFIO FINAL" }, pista = 3, rivais = rivais, final = true }
+  return { dificuldade = { id = "final", nome = "DESAFIO FINAL" }, pista = 3, rivais = rivais, carros = carros,
+           final = true }
 end
 
--- opcoes para Corrida.nova (corrida.lua) a partir de uma das corridas acima
-function Campeonato.opcoes_da_corrida(e, corrida)
+-- opcoes para Corrida.nova (corrida.lua) a partir de uma das corridas acima. minas: true = o
+-- jogador comprou o pacote (C.PRECO_MINAS, pago em Campeonato.aplicar). Os rivais com minas
+-- (quantos: pelo nivel) saem do sorteio fixo da rodada.
+function Campeonato.opcoes_da_corrida(e, corrida, minas)
   local Pista = require "pista"
-  local fator = C.CAMPEONATO_FATOR[corrida.dificuldade.id]
+  local nivel = Campeonato.nivel(e)
   local rivais = {}
   if corrida.final then
     local chefe = Campeonato.CHEFE
     rivais[1] = { nome = chefe.nome, modelo = chefe.modelo, fator = chefe.fator, blindagem = chefe.blindagem }
   end
-  for _, i in ipairs(corrida.rivais) do
-    local p = Campeonato.PILOTOS[i]
-    rivais[#rivais + 1] = { nome = p[1], modelo = p[2], fator = fator }
+  for k, i in ipairs(corrida.rivais) do
+    rivais[#rivais + 1] = { nome = Campeonato.PILOTOS[i][1], modelo = corrida.carros[k], fator = 1 }
   end
+  local com_minas = corrida.final and #rivais or nivel.minas
+  local primeiro = sorteio(e.rodada, 77) % #rivais
+  for k = 0, com_minas - 1 do rivais[(primeiro + k) % #rivais + 1].minas = C.MINAS end
   return {
     pista = corrida.pista, voltas = Pista.LISTA[corrida.pista].voltas,
-    modelo = Campeonato.modelo(e).id, rivais = rivais,
+    modelo = Campeonato.modelo(e).id, rivais = rivais, nivel = e.nivel or 2,
+    minas = minas and C.MINAS or 0, preco_minas = minas and C.PRECO_MINAS or 0,
     melhorias = { motor = e.motor, pneus = e.pneus, blindagem = e.blindagem },
     dificuldade = corrida.dificuldade.id, campeonato = corrida,
   }
@@ -207,17 +255,19 @@ end
 
 -- ---------------------------------------------------------------- depois da corrida
 -- r: a corrida terminada (corrida.lua). Devolve as linhas para a tela de resultado e aplica no
--- estado: dinheiro (premios - conserto), pontos do ranking, rodada.
+-- estado: dinheiro (premios - minas - conserto), pontos do ranking, rodada. As minas sao pagas
+-- aqui (e nao na compra): saindo no meio da corrida, nada muda.
 function Campeonato.aplicar(e, r, premio)
   local j = r.jogador
   local dif = r.dificuldade
-  local linhas = {}
+  premio = floor(premio / 100) * 100
+  local minas = r.preco_minas or 0
+  if minas > e.dinheiro + premio then minas = e.dinheiro + premio end
   -- conserto: o carro volta inteiro para a proxima, e voce paga pelo estrago
   local dano = C.VIDA - j.vida
   local conserto = floor(dano * (C.CONSERTO_POR_PCT + e.carro - 1) / 100 + 0.99) * 100
-  premio = floor(premio / 100) * 100
-  if conserto > e.dinheiro + premio then conserto = e.dinheiro + premio end
-  e.dinheiro = floor(e.dinheiro + premio - conserto)
+  if conserto > e.dinheiro + premio - minas then conserto = e.dinheiro + premio - minas end
+  e.dinheiro = floor(e.dinheiro + premio - minas - conserto)
   if e.dinheiro > Campeonato.DINHEIRO_MAX then e.dinheiro = Campeonato.DINHEIRO_MAX end
   -- pontos do ranking
   local tabela = C.PONTOS_RANKING[dif] or C.PONTOS_RANKING.facil
@@ -226,34 +276,42 @@ function Campeonato.aplicar(e, r, premio)
   if e.pontos > 255 then e.pontos = 255 end
   if e.rodada < 63 then e.rodada = e.rodada + 1 end
   local venceu_final = r.campeonato and r.campeonato.final and j.posicao == 1 and not j.destruido
-  return { conserto = conserto, pontos = pontos, premio = premio, venceu_final = venceu_final }
+  return { conserto = conserto, minas = minas, pontos = pontos, premio = premio, venceu_final = venceu_final }
 end
 
 -- ---------------------------------------------------------------- password
--- 8 letras de um alfabeto de 32 (sem I, O, 0 e 1, que se confundem) = 40 bits:
---   carro 4 + motor 2 + pneus 2 + blindagem 2 + dinheiro/100 10 + rodada 6 + pontos 8 = 34 bits
---   + 6 bits de verificacao. Os 34 bits sao embaralhados por uma mascara que depende da
---   verificacao: mudar 1 dolar muda o password inteiro, e um erro de digitacao quase sempre da
---   "password invalido" (1 em 64 passaria).
+-- 8 letras de um alfabeto de 32 (sem I, O, 0 e 1, que se confundem) = 40 bits. O estado vira um
+-- numero so (base mista: carro 9 x motor 4 x pneus 4 x blindagem 4 x dinheiro/100 1024 x rodada
+-- 64 x pontos 256 x nivel 3 = 2,9 x 10^10, cabe em 35 bits) + 5 bits de verificacao. Os 35 bits
+-- sao embaralhados por uma mascara que depende da verificacao: mudar 1 dolar muda o password
+-- inteiro, e um erro de digitacao quase sempre da "password invalido" (~97%). Ate a v0.26 eram
+-- 34 bits (sem o nivel) + 6: os passwords antigos nao valem mais.
 Campeonato.ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 local ALFA = Campeonato.ALFABETO
 local CHAVE = 0x9C5A3E71B4        -- 40 bits
-local M34 = (1 << 34) - 1
+local M35 = (1 << 35) - 1
+-- os campos, do primeiro (mais alto) ao ultimo, e quantos valores cada um tem
+local CAMPOS = { { "carro", 9 }, { "motor", 4 }, { "pneus", 4 }, { "blindagem", 4 }, { "centenas", 1024 },
+                 { "rodada", 64 }, { "pontos", 256 }, { "niv", 3 } }
+local TOTAL = 1
+for _, c in ipairs(CAMPOS) do TOTAL = TOTAL * c[2] end
 
 local function verificacao(v)
   local h = (v * 0x9E3779B97F4A7C15) & 0x7fffffffffffffff
-  return (h >> 40) & 63
+  return (h >> 40) & 31
 end
 
 local function mascara(c)
-  return ((c + 1) * 0x5DEECE66D + 0xB) * 0x2545F491 & M34
+  return ((c + 1) * 0x5DEECE66D + 0xB) * 0x2545F491 & M35
 end
 
 function Campeonato.senha(e)
-  local v = (e.carro - 1) | e.motor << 4 | e.pneus << 6 | e.blindagem << 8
-    | floor(e.dinheiro / 100) << 10 | e.rodada << 20 | e.pontos << 26
+  local valores = { carro = e.carro - 1, motor = e.motor, pneus = e.pneus, blindagem = e.blindagem,
+                    centenas = floor(e.dinheiro / 100), rodada = e.rodada, pontos = e.pontos, niv = (e.nivel or 2) - 1 }
+  local v = 0
+  for _, c in ipairs(CAMPOS) do v = v * c[2] + valores[c[1]] end
   local c = verificacao(v)
-  local w = ((v ~ mascara(c)) << 6 | c) ~ CHAVE
+  local w = ((v ~ mascara(c)) << 5 | c) ~ CHAVE
   local s = {}
   for i = 8, 1, -1 do
     local k = w & 31
@@ -273,15 +331,19 @@ function Campeonato.ler_senha(texto)
     w = w << 5 | (k - 1)
   end
   w = w ~ CHAVE
-  local c = w & 63
-  local v = (w >> 6) ~ mascara(c)
-  if verificacao(v) ~= c then return nil end
-  local e = {
-    carro = (v & 15) + 1, motor = v >> 4 & 3, pneus = v >> 6 & 3, blindagem = v >> 8 & 3,
-    dinheiro = (v >> 10 & 1023) * 100, rodada = v >> 20 & 63, pontos = v >> 26 & 255,
+  local c = w & 31
+  local v = (w >> 5) ~ mascara(c)
+  if verificacao(v) ~= c or v >= TOTAL then return nil end
+  local valores = {}
+  for i = #CAMPOS, 1, -1 do
+    local base = CAMPOS[i][2]
+    valores[CAMPOS[i][1]] = v % base
+    v = v // base
+  end
+  return {
+    carro = valores.carro + 1, motor = valores.motor, pneus = valores.pneus, blindagem = valores.blindagem,
+    dinheiro = valores.centenas * 100, rodada = valores.rodada, pontos = valores.pontos, nivel = valores.niv + 1,
   }
-  if e.carro > #Carros then return nil end
-  return e
 end
 
 -- "ABCD EFGH" (mais facil de anotar)

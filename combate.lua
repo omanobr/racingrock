@@ -21,13 +21,15 @@ function Combate.novo(corrida)
   local cb = setmetatable({ corrida = corrida, minas = {}, itens = {}, efeitos = {}, proximo_item = 2,
     destruidos = 0 }, Combate)
   for _, c in ipairs(corrida.carros) do
-    c.vida, c.municao, c.minas, c.dinheiro, c.fumaca = C.VIDA, C.MUNICAO, C.MINAS, 0, 0
+    c.vida, c.municao, c.minas, c.dinheiro, c.fumaca = C.VIDA, C.MUNICAO, c.minas_iniciais or 0, 0, 0
     c.dano_por, c.abates, c.mira_erro = {}, 0, 0
-    -- blindagem e arma pela ficha do modelo (carros.lua), como no Death Rally
-    local b = escala(c.modelo.blindagem, C.BLINDAGEM_BASE) + C.BLINDAGEM_NIVEL + (c.humano and C.BLINDAGEM_JOGADOR or 0)
+    -- blindagem e arma pela ficha do modelo (carros.lua), como no Death Rally; no computador, x o
+    -- fator do nivel (C.NIVEIS)
+    local f = c.fator_nivel or 1
+    local b = (escala(c.modelo.blindagem, C.BLINDAGEM_BASE) + C.BLINDAGEM_NIVEL) * f + (c.humano and C.BLINDAGEM_JOGADOR or 0)
       + (c.nivel_blindagem or 0) * C.MELHORIA_BLINDAGEM      -- oficina do modo historia
     c.blindagem = b < C.BLINDAGEM_MAX and b or C.BLINDAGEM_MAX
-    c.fator_arma = escala(c.modelo.arma, C.ARMA_FATOR)
+    c.fator_arma = escala(c.modelo.arma, C.ARMA_FATOR) * f
   end
   cb.e16, cb.e32 = Sprites.img.efx.e16, Sprites.img.efx.e32
   return cb
