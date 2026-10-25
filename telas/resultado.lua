@@ -64,6 +64,7 @@ function Tela.nova(corrida)
       if c.abatido_por == corrida.jogador then abatidos[#abatidos + 1] = c.nome end
     end
     t.rodada = { antes = antes, rodada_antes = rodada_antes, pontos = res.pontos, abatidos = abatidos }
+    t.cobranca = res.agiota
   end
   return t
 end
@@ -72,6 +73,7 @@ function Tela:atualizar()
   self.espera = self.espera - 1
   if self.espera <= 0 and Entrada.confirmar() then
     if self.final then Jogo.ir("final")
+    elseif self.historia and self.cobranca then Jogo.ir("cobranca", self.cobranca, self.rodada)
     elseif self.historia then Jogo.ir("rodada", self.rodada)
     else Jogo.ir("titulo") end
   end

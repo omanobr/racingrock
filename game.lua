@@ -26,6 +26,7 @@ local TELAS = {
   final = require "telas.final",
   abertura = require "telas.abertura",
   rodada = require "telas.rodada",
+  cobranca = require "telas.cobranca",
 }
 
 Jogo = { tela = nil }

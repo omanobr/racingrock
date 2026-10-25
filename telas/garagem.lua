@@ -136,7 +136,7 @@ function Tela:montar()
     end
   end
   ag[#ag + 1] = { texto = "VOLTAR", acao = function() self:ir("menu") end }
-  self.menu_agiota = Menu.novo(ag, 60, 150, 18, 300, true)
+  self.menu_agiota = Menu.novo(ag, 30, 150, 18, 262, true)
 end
 
 -- corrida escolhida no cartaz: a proposta de recompensa (as vezes) e depois o mercado negro
@@ -180,7 +180,7 @@ function Tela:montar_mercado()
       end, explica = "sabotagem" },
     { texto = "CORRER", acao = function() self:correr(c) end, explica = "correr" },
     { texto = "VOLTAR", acao = function() self:ir("corridas") end, explica = "voltar" },
-  }, 40, 52, 18, 400, true)
+  }, 56, 42, 34, 240, true)
 end
 
 function Tela:ir(modo)
@@ -439,54 +439,63 @@ function Tela:desenhar_proposta()
   self.menu_proposta:desenhar()
 end
 
+-- explicacao do item escolhido no mercado negro (uma linha, no painel de baixo)
 local EXPLICA_MERCADO = {
-  minas = { "3 MINAS PARA SOLTAR ATRAS DE VOCE (BOTAO " .. Entrada.NOME.mina .. ").",
-            "A METRALHADORA E A UNICA ARMA DE FABRICA." },
-  espinhos = { "ESPINHOS NO PARA-CHOQUE: AS SUAS BATIDAS TIRAM 3X MAIS",
-               "VIDA DOS OUTROS, E AS DELES TIRAM A METADE DE VOCE." },
-  foguete = { "COMBUSTIVEL DE FOGUETE: O TURBO LARGA COM O DOBRO", "DE CARGA." },
-  sabotagem = { "UM CAPANGA MEXE NO CARRO DO RIVAL ESCOLHIDO:",
-                "ELE LARGA COM " .. C.SABOTAGEM_VIDA .. "% DE VIDA. (" .. Entrada.NOME.confirmar .. " TROCA O RIVAL)" },
-  correr = { "AS COMPRAS SO VALEM PARA ESTA CORRIDA E SAO PAGAS NO FIM", "DELA (SAINDO NO MEIO, NADA E COBRADO)." },
-  voltar = { "VOLTA PARA OS CARTAZES (AS COMPRAS FICAM DESMARCADAS).", "" },
+  minas = "3 MINAS PARA SOLTAR ATRAS DE VOCE (BOTAO " .. Entrada.NOME.mina .. "). SO A METRALHADORA E DE FABRICA.",
+  espinhos = "SUAS BATIDAS TIRAM 3X MAIS VIDA DOS OUTROS, E AS DELES A METADE DE VOCE.",
+  foguete = "COMBUSTIVEL DE FOGUETE: O TURBO LARGA COM O DOBRO DE CARGA.",
+  sabotagem = "O RIVAL ESCOLHIDO LARGA COM " .. C.SABOTAGEM_VIDA .. "% DE VIDA (" .. Entrada.NOME.confirmar .. " TROCA O RIVAL).",
+  correr = "TUDO VALE SO PARA ESTA CORRIDA E E PAGO NO FIM (SAIR NO MEIO NAO COBRA).",
+  voltar = "VOLTA PARA OS CARTAZES.",
 }
+local ICONE_MERCADO = { "minas", "espinhos", "foguete", "sabotagem" }
 
+-- mercado negro (arte do Felipe: o contrabandista no balcao, a direita): menu com os icones a
+-- esquerda, explicacao e total embaixo
 function Tela:desenhar_mercado()
-  Menu.imagem("mural")
-  Menu.painel(16, 34, 448, 214)
+  Menu.imagem("mercado")
+  Menu.painel(8, 32, 296, 194)
+  local itens = Sprites.img.ui.itens
+  for k, chave in ipairs(ICONE_MERCADO) do ui.tile(itens, DT.itens[chave], 14, 32 + (k - 1) * 34) end
   self.menu_mercado:desenhar()
+  Menu.painel(8, 228, 464, 27)
   local o = self.menu_mercado:atual()
-  for i, l in ipairs(EXPLICA_MERCADO[o.explica] or {}) do ui.print(l, 30, 166 + i * 12, Cores.cinza_claro) end
+  ui.print(EXPLICA_MERCADO[o.explica] or "", 16, 232, Cores.cinza_claro)
   local total = Campeonato.preco_compras(self.compras)
-  ui.print("TOTAL: " .. dinheiro(total), 30, 214, total > self.e.dinheiro and Cores.vermelho or Cores.amarelo)
-  ui.print("SEU DINHEIRO: " .. self.dinheiro, 200, 214, Cores.verde)
+  local s = "TOTAL: " .. dinheiro(total) .. "   SEU DINHEIRO: " .. self.dinheiro
+  ui.print(s, 16, 243, total > self.e.dinheiro and Cores.vermelho or Cores.amarelo)
+  -- recompensa aceita: num quadrinho no alto, a direita
   local r = self.compras.recompensa
   if r then
-    ui.print(string.format("RECOMPENSA: DESTRUIR %s (+%s / -%s)", r.nome, dinheiro(r.valor), dinheiro(r.multa)), 30,
-      230, Cores.vermelho)
+    Menu.painel(312, 32, 160, 40, Cores.vermelho)
+    ui.print("RECOMPENSA ACEITA:", 320, 37, Cores.amarelo)
+    ui.print("DESTRUIR " .. r.nome, 320, 48, Cores.branco)
+    ui.print("+" .. dinheiro(r.valor) .. " / -" .. dinheiro(r.multa), 320, 59, Cores.cinza_claro)
   end
   faixa_rodape()
 end
 
+-- agiota (arte do Felipe: ele e os capangas a direita): conversa e menu a esquerda
 function Tela:desenhar_agiota()
-  Menu.imagem("mural")
-  Menu.painel(40, 40, 400, 200, Cores.vermelho)
-  Texto.escrever("f2", "AGIOTA", 56, 48, "amarelo")
+  Menu.imagem("agiota")
+  Menu.painel(8, 32, 296, 222, Cores.vermelho)
+  Texto.escrever("f2", "AGIOTA", 18, 40, "amarelo")
   local e = self.e
   if (e.divida_n or 0) > 0 then
-    ui.print(string.format("VOCE ME DEVE %s.", dinheiro(Campeonato.divida(e))), 56, 76, Cores.branco)
-    ui.print(string.format("O PRAZO VAI ATE A RODADA %d (FALTAM %d).", e.rodada + e.prazo, e.prazo), 56, 90, Cores.branco)
-    ui.print("SE NAO PAGAR, MEUS RAPAZES LEVAM TODO O SEU", 56, 112, Cores.vermelho)
-    ui.print("DINHEIRO E AS MELHORIAS DO CARRO.", 56, 124, Cores.vermelho)
+    ui.print(string.format("VOCE ME DEVE %s.", dinheiro(Campeonato.divida(e))), 18, 66, Cores.branco)
+    ui.print(string.format("O PRAZO VAI ATE A RODADA %d (FALTAM %d).", e.rodada + e.prazo, e.prazo), 18, 80, Cores.branco)
+    ui.print("SE NAO PAGAR, MEUS RAPAZES LEVAM TODO O SEU", 18, 100, Cores.vermelho)
+    ui.print("DINHEIRO E AS MELHORIAS DO CARRO.", 18, 112, Cores.vermelho)
   else
-    ui.print("PRECISA DE DINHEIRO? EU EMPRESTO.", 56, 76, Cores.branco)
+    ui.print("PRECISA DE DINHEIRO? EU EMPRESTO.", 18, 66, Cores.branco)
     ui.print(string.format("DEVOLVA COM %d%% DE JUROS EM %d RODADAS.", (C.AGIOTA_JUROS - 1) * 100 // 1, C.AGIOTA_PRAZO),
-      56, 90, Cores.branco)
-    ui.print("SE NAO PAGAR NO PRAZO, MEUS RAPAZES LEVAM TODO O", 56, 112, Cores.vermelho)
-    ui.print("SEU DINHEIRO E AS MELHORIAS DO CARRO. UM POR VEZ.", 56, 124, Cores.vermelho)
+      18, 80, Cores.branco)
+    ui.print("SE NAO PAGAR NO PRAZO, MEUS RAPAZES LEVAM", 18, 100, Cores.vermelho)
+    ui.print("TODO O SEU DINHEIRO E AS MELHORIAS DO CARRO.", 18, 112, Cores.vermelho)
+    ui.print("UM EMPRESTIMO POR VEZ.", 18, 124, Cores.cinza_claro)
   end
   self.menu_agiota:desenhar()
-  ui.print("SEU DINHEIRO: " .. self.dinheiro, 56, 222, Cores.verde)
+  ui.print("SEU DINHEIRO: " .. self.dinheiro, 18, 236, Cores.verde)
   faixa_rodape()
 end
 
