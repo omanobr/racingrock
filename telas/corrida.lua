@@ -8,7 +8,6 @@ local Entrada = require "entrada"
 local Cores = require "cores"
 local Carro = require "carro"
 local Texto = require "texto"
-local Som = require "som"
 local Rastros = require "rastros"
 
 local Tela = {}
@@ -34,11 +33,6 @@ function Tela:atualizar()
   if self.demo and (Entrada.confirmar() or Entrada.voltar() or Entrada.pausar()) then
     Jogo.ir("titulo")
     return
-  end
-  -- a musica da corrida comeca depois de carregar a pista (um quadro demorado engasga a musica)
-  if not self.musica then
-    self.musica = true
-    Som.corrida(self.corrida.campeonato and self.corrida.campeonato.final)
   end
   if Entrada.pausar() then self.pausa = not self.pausa end
   if self.pausa then

@@ -1,7 +1,6 @@
 -- Marcas de pneu e poeira (v0.29, pedido do Felipe): enfeite no chao, desenhado antes dos carros.
 -- Custo controlado (o Felipe perguntou se pesa): no maximo MARCAS pontos de pneu (um anel: os mais
--- velhos somem) e POEIRA nuvens, cada um um ui.rectfill, e so os que estao na tela; ~600 a 900
--- instrucoes por quadro (a corrida usa ~10 mil de ~16 mil).
+-- velhos somem) e POEIRA nuvens, cada um um ui.rectfill, e so os que estao na tela.
 --   marcas: so derrapando de verdade (deslize alto e rapido), nas 2 rodas de tras, a cada 3 quadros
 --   poeira: andando na terra, uma nuvem a cada 5 quadros, que cresce e some em meio segundo
 local Cores = require "cores"
@@ -10,7 +9,7 @@ local Pista = require "pista"
 local Rastros = {}
 Rastros.__index = Rastros
 
-local MARCAS, POEIRA, POEIRA_DURA = 64, 16, 0.5
+local MARCAS, POEIRA, POEIRA_DURA = 32, 8, 0.5   -- v0.31: era 64 e 16 (no aparelho, 59,9 -> ~55,5 FPS)
 local sin, cos = math.sin, math.cos
 local rectfill = ui.rectfill
 

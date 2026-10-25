@@ -13,7 +13,6 @@ local Rapida = require "telas.rapida"
 local Texto = require "texto"
 local C = require "config"
 local DT = require "dados_telas"
-local Som = require "som"
 
 local Tela = {}
 Tela.__index = Tela
@@ -35,7 +34,6 @@ local NOME_DIFICULDADE = { facil = "F\xC1CIL", medio = "M\xC9DIA", dificil = "DI
 function Tela.nova()
   local t = setmetatable({ modo = "menu", aviso = nil, aviso_t = 0, confirmar = nil }, Tela)
   t.e = Jogo.campeonato
-  Som.musica("menu")
   t:montar()
   return t
 end

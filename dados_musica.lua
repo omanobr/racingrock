@@ -1,8 +1,3 @@
 -- Gerado por ferramentas/preparar_musicas.py. Nao edite.
--- Musicas (music/<nome>.mp3): duracao em segundos.
-return {
-  menu = 180.8,
-  corrida1 = 179.6,
-  corrida2 = 178.7,
-  chefe = 182.5,
-}
+-- A trilha (music/trilha.mp3): as 4 musicas em sequencia; duracao em segundos.
+return { arquivo = "music/trilha", duracao = 721.6 }

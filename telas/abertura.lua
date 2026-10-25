@@ -27,7 +27,7 @@ end
 
 function Tela.nova()
   Jogo.brilho = 0
-  Som.musica("menu")
+  Som.musica()   -- a trilha comeca aqui e nao troca mais (som.lua)
   return setmetatable({ t = 0 }, Tela)
 end
 

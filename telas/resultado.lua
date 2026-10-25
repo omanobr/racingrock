@@ -6,7 +6,6 @@ local Cores = require "cores"
 local Campeonato = require "campeonato"
 local Menu = require "menu"
 local Texto = require "texto"
-local Som = require "som"
 local DT = require "dados_telas"
 
 local Tela = {}
@@ -20,7 +19,6 @@ end
 
 function Tela.nova(corrida)
   local t = setmetatable({ espera = 30 }, Tela)
-  Som.musica("menu")
   local premios, total = corrida:premiar()
   t.linhas = {}
   for i, c in ipairs(corrida.classificacao) do

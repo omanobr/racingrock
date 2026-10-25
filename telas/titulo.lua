@@ -31,7 +31,7 @@ local menu = Menu.novo({
 }, 166, 152, 22, 192)
 
 function Tela.nova()
-  Som.musica("menu")
+  Som.musica()   -- (ja tocando desde a abertura; aqui so quando o jogo comeca no titulo)
   return setmetatable({ quadro = 0 }, Tela)
 end
 
