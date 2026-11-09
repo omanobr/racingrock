@@ -12,7 +12,7 @@
 -- contador de quadros do update(frame) nao conta os quadros pulados (dframe sempre 1).
 --
 -- O que cada grupo quer descobrir:
---   LUA      quantas instrucoes o console faz por quadro (o firmware 0.6.8 deixou o GearX ~2x
+--   LUA      quantas instrucoes o console faz por quadro (40 e 60 mil) (o firmware 0.6.8 deixou o GearX ~2x
 --            mais rapido); o testar_console.py conta as instrucoes de cada teste no PC
 --   LETRAS   quanto custa quebrar o lote (v0.34): as mesmas 288 letras e 24 quadradinhos, com
 --            a folha da fonte lida 1 vez ou 24 vezes no quadro
@@ -99,16 +99,8 @@ end
 --   jogadores, carros (Corrida.nova) }
 local TESTES = {
   { "VAZIO (SO A PALETA)", fundo },
-  { "LUA: 20 MIL INSTRUCOES", lua(20) },
   { "LUA: 40 MIL INSTRUCOES", lua(40) },
   { "LUA: 60 MIL INSTRUCOES", lua(60) },
-  { "300 RETANGULOS", function()
-    fundo()
-    for k = 0, 299 do
-      local x, y = (k % 30) * 16, 20 + (k // 30) * 24
-      ui.rectfill(x, y, x + 11, y + 15, k % 2 == 0 and Cores.amarelo or Cores.azul)
-    end
-  end },
   { "LETRAS: NUM LOTE (1 LEITURA)", letras(false) },
   { "LETRAS: LOTE QUEBRADO (24 LEITURAS)", letras(true) },
   { "PISTA: 1 FOLHA", folhas(1) },
@@ -122,8 +114,10 @@ local TESTES = {
   { "GRAMADO: SEM RASTROS, TIROS E ITENS", corrida, { corrida = GRAMADO, sem = { efeitos = true } } },
   { "GRAMADO: SO O DESENHO (PARADA)", corrida, { corrida = GRAMADO, so = "desenho" } },
   { "GRAMADO: SO AS CONTAS (SEM DESENHO)", corrida, { corrida = GRAMADO, so = "contas" } },
-  { "GRAMADO: 2 JOGADORES, 4 CARROS", corrida, { corrida = GRAMADO, jogadores = 2 } },
-  { "GRAMADO: 2 JOGADORES, SEM RIVAIS", corrida, { corrida = GRAMADO, jogadores = 2, carros = 2 } },
+  { "GRAMADO 2 JOG.: 4 CARROS", corrida, { corrida = GRAMADO, jogadores = 2 } },
+  { "GRAMADO 2 JOG.: 4 CARROS, SEM PAINEL", corrida, { corrida = GRAMADO, jogadores = 2, sem = { painel = true } } },
+  { "GRAMADO 2 JOG.: 4 CARROS, SEM A PISTA", corrida, { corrida = GRAMADO, jogadores = 2, sem = { pista = true } } },
+  { "GRAMADO 2 JOG.: SEM RIVAIS", corrida, { corrida = GRAMADO, jogadores = 2, carros = 2 } },
 }
 for i = 3, Pista.quantas() do
   TESTES[#TESTES + 1] = { "CORRIDA: " .. Pista.LISTA[i].nome, corrida, { corrida = i } }
