@@ -1,8 +1,15 @@
 -- Teste de desempenho (OPCOES > TESTE DE DESEMPENHO), para rodar NO APARELHO, como o do GearX.
--- Roda sozinho uma lista de testes de 3 s e mede, em cada um, o FPS (ui.stat(7)) e o uso do
--- processador (ui.stat(1), firmware 0.6.8) que o console informa. No fim mostra uma tabela: tire
--- uma foto e mande. Cada teste escreve o nome no log (cabo USB) ANTES de comecar (se o console
--- travar, o ultimo nome do log e o culpado) e o resultado no fim.
+-- Roda sozinho uma lista de testes de 4 s e mede, em cada um, o FPS que o console informa
+-- (ui.stat(7)): a media e o pior segundo. No fim mostra uma tabela: tire uma foto e mande. Cada
+-- teste escreve o nome no log (cabo USB) ANTES de comecar (se o console travar, o ultimo nome do
+-- log e o culpado) e o resultado no fim, com o ui.stat(1) ("uso do processador" na documentacao
+-- do firmware 0.6.8; na 1a rodada, v0.38, ficou em 32-33% em todos os testes, ate no Lua de 60
+-- mil instrucoes: nao mede o Lua do jogo).
+--
+-- Medir no aparelho (1a rodada, v0.38): o ui.stat(7) e a contagem do segundo anterior e chega
+-- 1-2 s atrasado, entao os 2 primeiros segundos de cada teste nao contam; ler o pistas/<id>.lua
+-- de uma pista trava o console ~0,5 s (as pistas sao lidas todas antes do 1o teste); e o
+-- contador de quadros do update(frame) nao conta os quadros pulados (dframe sempre 1).
 --
 -- O que cada grupo quer descobrir:
 --   LUA      quantas instrucoes o console faz por quadro (o firmware 0.6.8 deixou o GearX ~2x
@@ -17,7 +24,6 @@ local C = require "config"
 local Cores = require "cores"
 local Entrada = require "entrada"
 local Diag = require "diagnostico"
-local Tempo = require "tempo"
 local Pista = require "pista"
 local Texto = require "texto"
 local TelaCorrida = require "telas.corrida"
@@ -25,7 +31,7 @@ local TelaCorrida = require "telas.corrida"
 local Tela = {}
 Tela.__index = Tela
 
-local AQUECE, MEDE = 60, 120   -- quadros de cada teste: o 1o segundo nao conta (troca de teste)
+local AQUECE, MEDE = 120, 120  -- quadros de cada teste: os 2 primeiros segundos nao contam
 local GRAMADO = 2              -- em pistas/lista.lua (a 1a e a de treino)
 local OPCOES = {}              -- o 3o campo de cada teste (abaixo)
 
@@ -137,11 +143,17 @@ local function folhas_do_gramado()
   return lista
 end
 
+-- o 1o quadro mostra "CARREGANDO"; no 2o as pistas sao lidas (atual = 0 ate la)
 function Tela.nova()
-  local t = setmetatable({ atual = 1, resultados = {}, folhas = folhas_do_gramado() }, Tela)
+  return setmetatable({ atual = 0, espera = 1, resultados = {} }, Tela)
+end
+
+function Tela:carregar()
+  for i = 2, Pista.quantas() do require("pistas." .. Pista.LISTA[i].id) end
+  self.folhas = folhas_do_gramado()
   print("RROCK TESTE DE DESEMPENHO v" .. C.VERSAO .. ": " .. #TESTES .. " testes")
-  t:comecar()
-  return t
+  self.atual = 1
+  self:comecar()
 end
 
 -- corrida de 4 no piloto automatico, todos com minas, ja correndo (sem a contagem) e com as
@@ -155,7 +167,7 @@ end
 
 function Tela:comecar()
   self.quadro, self.medindo = 0, false
-  self.soma7, self.n7, self.soma1, self.n1 = 0, 0, 0, 0
+  self.soma7, self.n7, self.min7, self.soma1, self.n1 = 0, 0, nil, 0, 0
   TelaCorrida.sem = {}
   local op = OPCOES[self.atual]
   if not op then
@@ -185,15 +197,12 @@ function Tela:terminar()
   local r = {}
   r.fps7 = self.n7 > 0 and self.soma7 / self.n7 or nil
   r.cpu = self.n1 > 0 and self.soma1 / self.n1 or nil
-  -- o contador de quadros do console conta tambem os pulados: MEDE updates em dframe quadros
-  local dframe = type(Tempo.frame) == "number" and self.frame0 and Tempo.frame - self.frame0
-  if dframe and dframe > 0 then r.quadros = 60 * MEDE / dframe end
   local seg = self.relogio0 and Diag.relogio() - self.relogio0
   r.fps = r.fps7 or (seg and seg > 0 and MEDE / seg) or nil   -- simulador: pelo relogio
-  r.texto = string.format("%5s %5s %7s", numero(r.fps, "%.1f"), numero(r.cpu, "%.0f%%"), numero(r.quadros, "%.1f"))
+  r.texto = string.format("%5s %5s", numero(r.fps, "%.1f"), numero(self.min7, "%.0f"))
   self.resultados[self.atual] = r
-  print(string.format("RROCK TESTE %d %s: fps=%s cpu=%s quadros=%s", self.atual, TESTES[self.atual][1],
-    numero(r.fps, "%.1f"), numero(r.cpu, "%.0f"), numero(r.quadros, "%.1f")))
+  print(string.format("RROCK TESTE %d %s: fps=%s pior=%s cpu=%s", self.atual, TESTES[self.atual][1],
+    numero(r.fps, "%.1f"), numero(self.min7, "%.0f"), numero(r.cpu, "%.0f")))
   self.atual = self.atual + 1
   if self.atual > #TESTES then print("RROCK TESTES FIM") end
   self:comecar()
@@ -203,6 +212,10 @@ function Tela:atualizar()
   if Entrada.voltar() then
     TelaCorrida.sem = {}
     Jogo.ir("opcoes")
+    return
+  end
+  if self.atual == 0 then
+    if self.espera > 0 then self.espera = self.espera - 1 else self:carregar() end
     return
   end
   if self.atual > #TESTES then
@@ -220,10 +233,13 @@ function Tela:atualizar()
   end
   self.quadro = self.quadro + 1
   if self.quadro == AQUECE then
-    self.medindo, self.frame0, self.relogio0 = true, Tempo.frame, Diag.relogio and Diag.relogio()
+    self.medindo, self.relogio0 = true, Diag.relogio and Diag.relogio()
   elseif self.medindo then
     local fps, cpu = Diag.stat(7), Diag.stat(1)
-    if fps then self.soma7, self.n7 = self.soma7 + fps, self.n7 + 1 end
+    if fps then
+      self.soma7, self.n7 = self.soma7 + fps, self.n7 + 1
+      if not self.min7 or fps < self.min7 then self.min7 = fps end
+    end
     if cpu then self.soma1, self.n1 = self.soma1 + cpu, self.n1 + 1 end
   end
   if self.quadro >= AQUECE + MEDE then self:terminar() end
@@ -240,7 +256,7 @@ function Tela:tabela()
   fundo()
   ui.print("TESTE DE DESEMPENHO v" .. C.VERSAO .. ": TIRE UMA FOTO DESTA TELA E MANDE", 8, 4, Cores.amarelo)
   ui.print("TESTE", 8, 16, Cores.cinza)
-  ui.print("  FPS   CPU QUADROS", 300, 16, Cores.cinza)
+  ui.print("  FPS  PIOR", 300, 16, Cores.cinza)
   for i, teste in ipairs(TESTES) do
     local r = self.resultados[i]
     local y = 27 + (i - 1) * 9
@@ -251,6 +267,11 @@ function Tela:tabela()
 end
 
 function Tela:desenhar()
+  if self.atual == 0 then
+    fundo()
+    ui.print("CARREGANDO AS PISTAS...", 171, 131, Cores.amarelo)
+    return
+  end
   local teste = TESTES[self.atual]
   if not teste then return self:tabela() end
   teste[2](self)

@@ -1,6 +1,8 @@
 -- Diagnostico de desempenho (C.DIAGNOSTICO em config.lua): uma vez por segundo, o FPS medido
--- pelo console (ui.stat(7)) e o uso do processador (ui.stat(1), firmware 0.6.8) vao para o log
--- do console (cabo USB, LOG_CONSOLE.bat) e, se ligado, para o rodape. No simulador, que nao tem ui.stat, usa o relogio do Lua (os.clock).
+-- pelo console (ui.stat(7)) vai para o log do console (cabo USB, LOG_CONSOLE.bat) e, se ligado,
+-- para o rodape. O log leva tambem o ui.stat(1) ("uso do processador" na documentacao do
+-- firmware 0.6.8), que no aparelho ficou em 32-33% com qualquer carga (teste de desempenho
+-- v0.38). No simulador, que nao tem ui.stat, usa o relogio do Lua (os.clock).
 local Cores = require "cores"
 local Tempo = require "tempo"
 
@@ -40,16 +42,17 @@ function D.quadro()
   end
   n = 0
   D.fps = fps
-  local cpu = D.stat(1)
-  texto = (fps and string.format("FPS %.0f", fps) or "FPS ?") .. (cpu and string.format("  CPU %.0f%%", cpu) or "")
+  texto = fps and string.format("FPS %.0f", fps) or "FPS ?"
   rodape_w = #texto * 6 + 3
   rodape_x = (480 - rodape_w) // 2
   if D.ligado then
+    local cpu = D.stat(1)
     local t = Jogo.tela
     local pista = t and t.corrida and t.corrida.pista.id or "-"
     print(string.format("RROCK FPS %s cpu=%s tela=%s pista=%s mem=%dKB quadro=%d passo=%.2f (%s) dframe=%s",
       fps and string.format("%.0f", fps) or "?", cpu and string.format("%.0f", cpu) or "?", Jogo.nome_tela or "?",
-      pista, collectgarbage("count") // 1, D.quadros, Tempo.passo, Tempo.fonte, Tempo.media_frame and string.format("%.2f", Tempo.media_frame) or "?"))
+      pista, collectgarbage("count") // 1, D.quadros, Tempo.passo, Tempo.fonte,
+      Tempo.media_frame and string.format("%.2f", Tempo.media_frame) or "?"))
   end
 end
 
