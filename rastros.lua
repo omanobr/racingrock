@@ -52,13 +52,15 @@ function Rastros:atualizar(corrida, dt)
   end
 end
 
--- x0, y0: canto da tela no mundo; so dentro das faixas pretas dos lados (16 px)
-function Rastros:desenhar(x0, y0)
+-- x0, y0: canto da tela no mundo; so dentro das faixas pretas dos lados (16 px): entre va e vb
+-- da tela (2 jogadores: a parte visivel de cada metade)
+function Rastros:desenhar(x0, y0, va, vb)
+  va, vb = va or 16, vb or 463
   local mx, my = self.mx, self.my
   local cor = Cores.fundo
   for k = 1, MARCAS do
     local sx, sy = (mx[k] - x0) // 1, (my[k] - y0) // 1
-    if sx >= 16 and sx <= 462 and sy >= 0 and sy <= 268 then rectfill(sx, sy, sx + 1, sy + 1, cor) end
+    if sx >= va and sx < vb and sy >= 0 and sy <= 268 then rectfill(sx, sy, sx + 1, sy + 1, cor) end
   end
   local px, py, pt = self.px, self.py, self.pt
   for k = 1, POEIRA do
@@ -66,7 +68,7 @@ function Rastros:desenhar(x0, y0)
     if t < POEIRA_DURA then
       local r = 1 + (t * 8) // 1                   -- cresce de 1 a 5 px
       local sx, sy = (px[k] - x0) // 1, (py[k] - y0) // 1
-      if sx - r >= 16 and sx + r <= 463 and sy - r >= 0 and sy + r <= 269 then
+      if sx - r >= va and sx + r <= vb and sy - r >= 0 and sy + r <= 269 then
         rectfill(sx - r, sy - r, sx + r, sy + r, t < POEIRA_DURA / 2 and Cores.terra or Cores.terra_escura)
       end
     end

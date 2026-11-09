@@ -20,6 +20,11 @@
 --   CORRIDA  o gramado (a pista mais pesada no aparelho) com uma parte desligada de cada vez
 --            (Tela.sem de telas/corrida.lua), so as contas, so o desenho, com 2 jogadores (tela
 --            dividida, v0.40: com 2 rivais e sem rivais), e as outras pistas
+-- Filmar em camera lenta (v0.41): o FPS acima e o do chip que roda o Lua; o chip de video le do
+-- cartao cada imagem desenhada e, se nao der conta, pode mostrar menos quadros sem o Lua saber
+-- (no GearX, 300 trocas de imagem travaram o video e o Lua seguiu). Por isso cada teste mostra um
+-- contador (0 a 99, sobe 1 a cada quadro do Lua) e um quadradinho que anda 8 px por quadro: num
+-- video em camera lenta do celular, um numero que falta e um quadro que o video nao mostrou.
 -- B: repete os testes. A: volta para as opcoes.
 local C = require "config"
 local Cores = require "cores"
@@ -27,6 +32,7 @@ local Entrada = require "entrada"
 local Diag = require "diagnostico"
 local Pista = require "pista"
 local Texto = require "texto"
+local P = require("dados_interface").painel
 local TelaCorrida = require "telas.corrida"
 
 local Tela = {}
@@ -220,6 +226,7 @@ function Tela:atualizar()
     Jogo.ir("opcoes")
     return
   end
+  self.contador = (self.contador or 0) + 1
   if self.atual == 0 then
     if self.espera > 0 then self.espera = self.espera - 1 else self:carregar() end
     return
@@ -284,6 +291,14 @@ function Tela:desenhar()
   ui.rectfill(0, 0, 479, 11, Cores.preto)
   ui.print(self.titulo, 4, 2, Cores.amarelo)
   ui.rectfill(0, 10, 479 * self.quadro // (AQUECE + MEDE), 11, Cores.amarelo)
+  -- contador e quadradinho para filmar em camera lenta (no comeco do arquivo)
+  local c = self.contador
+  local x = 16 + (c * 8) % 440
+  ui.rectfill(x, 13, x + 7, 18, Cores.branco)
+  ui.rectfill(422, 232, 467, 262, Cores.preto)
+  local pn = Sprites.img.ui.painel
+  ui.tile(pn, P.f3 + c // 10 % 10, 428, 236)
+  ui.tile(pn, P.f3 + c % 10, 445, 236)
 end
 
 return Tela

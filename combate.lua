@@ -253,15 +253,22 @@ end
 
 -- ---------------------------------------------------------------- desenho
 local TELA_W, TELA_H = 480, 270
+-- faixa da tela onde um tile pode ficar (XA a XB) e a parte visivel (VA a VB, dentro das faixas
+-- pretas): a tela inteira ou, com 2 jogadores, a metade de cada um (telas/corrida.lua)
+local XA, XB, VA, VB = 0, TELA_W, 16, TELA_W - 17
+local function faixa(v)
+  if v then XA, XB, VA, VB = v.xa, v.xb, v.va, v.vb else XA, XB, VA, VB = 0, TELA_W, 16, TELA_W - 17 end
+end
 
 -- tile de efeito (16 ou 32 px) centrado em (x, y) do mundo, so se couber inteiro na largura
 local function efeito_na_tela(img, tamanho, n, x, y, x0, y0)
   local sx, sy = (x - x0) // 1 - tamanho // 2, (y - y0) // 1 - tamanho // 2
-  if sx >= 0 and sx + tamanho <= TELA_W and sy > -tamanho and sy < TELA_H then ui.tile(img, n, sx, sy) end
+  if sx >= XA and sx + tamanho <= XB and sy > -tamanho and sy < TELA_H then ui.tile(img, n, sx, sy) end
 end
 
--- no chao (antes dos carros): minas e itens
-function Combate:desenhar_chao(x0, y0, quadro)
+-- no chao (antes dos carros): minas e itens; v: a visao (2 jogadores) ou nil (a tela inteira)
+function Combate:desenhar_chao(x0, y0, quadro, v)
+  faixa(v)
   local e16 = self.e16
   local pisca = (quadro // 20) % 2
   for _, m in ipairs(self.minas) do efeito_na_tela(e16, 16, Efx.mina[1] + pisca, m.x, m.y, x0, y0) end
@@ -276,9 +283,10 @@ local function quadro_do_efeito(e)
 end
 
 -- por cima dos carros: tiros, fogo dos destruidos, efeitos
-function Combate:desenhar_cima(x0, y0, quadro, cor_tiro)
+function Combate:desenhar_cima(x0, y0, quadro, cor_tiro, v)
+  faixa(v)
   local e16, e32 = self.e16, self.e32
-  local min_x, max_x = 16, TELA_W - 17                 -- dentro das faixas pretas
+  local min_x, max_x = VA, VB                          -- dentro das faixas pretas
   for _, c in ipairs(self.corrida.carros) do
     if c.tiro_x then                                   -- clarao no bico: pisca (3x3 e 2x2)
       local r = (quadro % 3 == 0) and 1 or 0

@@ -23,7 +23,6 @@ local rectfill, print_, tile = ui.rectfill, ui.print, ui.tile
 local B = D.barras
 local cache = {}
 local CHAVE_ORDEM = { "ordem1", "ordem2", "ordem3", "ordem4", "ordem5", "ordem6", "ordem7", "ordem8" }
-local CHAVE_DINHEIRO, CHAVE_CHEGADA = { "dinheiro", "dinheiro2" }, { "chegada", "chegada2" }
 local COR_CARRO = { ver = Cores.vermelho, azu = Cores.azul, ama = Cores.amarelo, pra = Cores.cinza_claro }
 
 local function texto(chave, valor, formato, ...)
@@ -47,16 +46,12 @@ local function mascara(x, y, fracao)
   if n < 24 then rectfill(x + 2 + 4 * n, y + 1, x + 96, y + 5, Cores.preto) end
 end
 
--- mensagem no meio da tela, em letra grande, com o topo em y: o painel e depois as letras (com
--- 2 jogadores, os paineis das duas visoes e depois as letras, para a fonte f3 sair numa carga so)
-local function aviso_painel(s, borda, y)
+-- mensagem no meio da tela, em letra grande
+local function aviso(s, borda)
   local w = Texto.largura("f3", s)
-  painel(240 - w // 2 - 10, y, w + 20, 33, borda or Cores.amarelo_escuro)
+  painel(240 - w // 2 - 10, 52, w + 20, 33, borda or Cores.amarelo_escuro)
+  Texto.escrever("f3", s, 240 - w // 2, 57, "amarelo")
 end
-local function aviso_texto(s, y)
-  Texto.escrever("f3", s, 240 - Texto.largura("f3", s) // 2, y + 5, "amarelo")
-end
-local AVISO, BORDA = {}, {}   -- o aviso de cada visao neste quadro (ou false)
 
 local P = D.painel
 
@@ -82,15 +77,8 @@ local function numero_dir(img, n, x_dir, y)
   until n == 0
 end
 
--- vistas: { { carro = c, oy = y da visao na tela, alto = altura }, ... } (telas/corrida.lua):
--- 1 jogador, a tela inteira; 2, uma visao em cima da outra, cada uma com o painel do seu carro
--- (sem a ordem dos carros a esquerda: nao cabe). Cada parte do painel sai para todas as visoes
--- antes da proxima: o ui.camera so desloca o desenho e nao entra na lista de desenho, entao
--- trocar de visao nao quebra o lote de uma folha.
-function Hud.desenhar(corrida, vistas)
-  local nv = #vistas
-  local um = nv == 1
-  local camera = ui.camera
+function Hud.desenhar(corrida)
+  local j = corrida.jogador
   local ui_img = Sprites.img.ui
   local barras = ui_img.barras
   local efx = Sprites.img.efx.e16
@@ -98,108 +86,189 @@ function Hud.desenhar(corrida, vistas)
   local n = #corrida.carros
   local m = corrida.mapa
   local mx = m and 472 - m.w
-  local travadas = corrida.tempo <= C.ARMAS_INICIO   -- armas travadas na largada: sem a barra
 
   -- Ordem pensada nas trocas de imagem: cada troca le a folha inteira do cartao, e o console
   -- aguenta umas 32 por quadro (pista + carros ja usam ate ~20). Primeiro os paineis
   -- (retangulos), depois cada folha de uma vez so, depois os retangulos e os textos.
-  -- b: o alto dos paineis de baixo (219 na tela inteira)
-  for k = 1, nv do
-    local v = vistas[k]
-    if not um then camera(0, -v.oy) end
-    local b = v.alto - 51
-    painel(4, 4, 100, 41)                       -- posicao, volta e tempo
-    if um then painel(4, 48, 100, 5 + 10 * #carros) end   -- ordem dos carros
-    if m then painel(mx - 2, 4, m.w + 4, m.h + 4) end
-    painel(4, b, 150, 49)                       -- vida, municao e minas
-    painel(324, b, 152, 49)                     -- velocimetro e turbo
-  end
+  painel(4, 4, 100, 41)                       -- posicao, volta e tempo
+  painel(4, 48, 100, 5 + 10 * #carros)        -- ordem dos carros
+  if m then painel(mx - 2, 4, m.w + 4, m.h + 4) end
+  painel(4, 219, 150, 49)                     -- vida, municao e minas
+  painel(324, 219, 152, 49)                   -- velocimetro e turbo
 
   -- numeros (img/ui/painel): posicao, ordinal, volta e km/h
   local pn = ui_img.painel
-  for k = 1, nv do
-    local v = vistas[k]
-    local j = v.carro
-    if not um then camera(0, -v.oy) end
-    tile(pn, P.f3 + j.posicao % 10, 9, 10)
-    tile(pn, P.ordinal, 25, 8)
-    local volta = j.volta < 1 and 1 or (j.volta > corrida.voltas and corrida.voltas or j.volta)
-    local x = numero(pn, volta, 50, 17)
-    tile(pn, P.barra, x, 17)
-    numero(pn, corrida.voltas, x + P.avanco, 17)
-    local vel = j.v > 0 and j.v or -j.v
-    numero_dir(pn, (vel * C.KMH) // 1, 410, v.alto - 48)
-  end
+  tile(pn, P.f3 + j.posicao % 10, 9, 10)
+  tile(pn, P.ordinal, 25, 8)
+  local volta = j.volta < 1 and 1 or (j.volta > corrida.voltas and corrida.voltas or j.volta)
+  local x = numero(pn, volta, 50, 17)
+  tile(pn, P.barra, x, 17)
+  numero(pn, corrida.voltas, x + P.avanco, 17)
+  local v = j.v > 0 and j.v or -j.v
+  numero_dir(pn, (v * C.KMH) // 1, 410, 222)
   -- mapinha
-  if m then
-    for k = 1, nv do
-      if not um then camera(0, -vistas[k].oy) end
-      tile(m.img, m.espelho and 1024 or 0, mx, 6)   -- folha de 1 tile (espelha)
-    end
-  end
+  if m then tile(m.img, m.espelho and 1024 or 0, mx, 6) end   -- folha de 1 tile (espelha)
   -- icones: conserto, municao, minas
-  for k = 1, nv do
-    local v = vistas[k]
-    if not um then camera(0, -v.oy) end
-    local b = v.alto - 51
-    tile(efx, Efx.conserto[1], 8, b + 2)
-    tile(efx, Efx.municao[1], 8, b + 17)
-    for q = 1, v.carro.minas do tile(efx, Efx.mina[1], 8 + (q - 1) * 16, b + 32) end
-  end
+  tile(efx, Efx.conserto[1], 8, 221)
+  tile(efx, Efx.municao[1], 8, 236)
+  for k = 1, j.minas do tile(efx, Efx.mina[1], 8 + (k - 1) * 16, 251) end
   -- barras (o tile tem 140 px de largura, mesmo nas de 100: o tile inteiro tem de caber na
   -- tela), as mascaras e o contorno da rampa do velocimetro, que a mascara apaga
-  for k = 1, nv do
-    local v = vistas[k]
-    if not um then camera(0, -v.oy) end
-    local b = v.alto - 51
-    tile(barras, B.vida, 28, b + 7)
-    if not travadas then tile(barras, B.municao, 28, b + 22) end
-    tile(barras, B.turbo, 330, b + 38)
-    tile(barras, B.velocidade, 330, b + 20)
+  local travadas = corrida.tempo <= C.ARMAS_INICIO   -- armas travadas na largada: sem a barra
+  tile(barras, B.vida, 28, 226)
+  if not travadas then tile(barras, B.municao, 28, 241) end
+  tile(barras, B.turbo, 330, 257)
+  tile(barras, B.velocidade, 330, 239)
+  mascara(28, 226, j.vida / C.VIDA)
+  if not travadas then mascara(28, 241, j.municao / C.MUNICAO) end
+  mascara(330, 257, j.turbo_carga)
+  local f = v / j.vmax
+  local acesos
+  if f <= 1 then
+    acesos = (f * 27.2 + 0.5) // 1
+  else
+    acesos = 27 + ((f - 1) * 11.3 + 0.5) // 1
+    if acesos > 34 then acesos = 34 end
   end
-  for k = 1, nv do
-    local v = vistas[k]
-    local j = v.carro
-    if not um then camera(0, -v.oy) end
-    local b = v.alto - 51
-    mascara(28, b + 7, j.vida / C.VIDA)
-    if not travadas then mascara(28, b + 22, j.municao / C.MUNICAO) end
-    mascara(330, b + 38, j.turbo_carga)
-    local f = (j.v > 0 and j.v or -j.v) / j.vmax
-    local acesos
-    if f <= 1 then
-      acesos = (f * 27.2 + 0.5) // 1
-    else
-      acesos = 27 + ((f - 1) * 11.3 + 0.5) // 1
-      if acesos > 34 then acesos = 34 end
-    end
-    if acesos < 34 then rectfill(332 + 4 * acesos, b + 21, 466, b + 31, Cores.preto) end
-  end
-  for k = 1, nv do
-    local v = vistas[k]
-    if not um then camera(0, -v.oy) end
-    tile(barras, B.velocidade_contorno, 330, v.alto - 31)
-  end
+  if acesos < 34 then rectfill(332 + 4 * acesos, 240, 466, 250, Cores.preto) end
+  tile(barras, B.velocidade_contorno, 330, 239)
 
-  -- ordem dos carros (cor, nome, vida) e os carros no mapinha (o seu pisca)
-  if um then
-    for i, c in ipairs(carros) do
-      local y = 51 + 10 * (i - 1)
-      rectfill(8, y + 1, 13, y + 6, COR_CARRO[c.cor] or Cores.cinza)
-      if not c.destruido then
-        local vida = c.vida
-        local w = (vida * 0.2) // 1
-        rectfill(80, y + 2, 99, y + 5, Cores.cinza_escuro)
-        if w > 0 then rectfill(80, y + 2, 79 + w, y + 5, vida > 50 and Cores.verde or (vida > 25 and Cores.amarelo or Cores.vermelho)) end
-      end
+  -- ordem dos carros (cor, nome, vida) e os carros no mapinha
+  for i, c in ipairs(carros) do
+    local y = 51 + 10 * (i - 1)
+    rectfill(8, y + 1, 13, y + 6, COR_CARRO[c.cor] or Cores.cinza)
+    if not c.destruido then
+      local vida = c.vida
+      local w = (vida * 0.2) // 1
+      rectfill(80, y + 2, 99, y + 5, Cores.cinza_escuro)
+      if w > 0 then rectfill(80, y + 2, 79 + w, y + 5, vida > 50 and Cores.verde or (vida > 25 and Cores.amarelo or Cores.vermelho)) end
     end
   end
   if m then
     local esc = m.escala
+    for i = #carros, 1, -1 do
+      local c = carros[i]
+      if not c.destruido then
+        local px, py = mx + 1 + (c.x * esc) // 1, 7 + (c.y * esc) // 1
+        if m.espelho then px = mx + m.w - 2 - ((m.largura - c.x) * esc) // 1 end
+        if c == j then
+          rectfill(px - 2, py - 2, px + 2, py + 2, Cores.preto)
+          rectfill(px - 1, py - 1, px + 1, py + 1, (corrida.quadros // 8) % 2 == 0 and Cores.branco or Cores.vermelho)
+        else
+          rectfill(px - 1, py - 1, px + 1, py + 1, COR_CARRO[c.cor] or Cores.cinza)
+        end
+      end
+    end
+  end
+
+  -- textos pequenos
+  print_(texto("de", n, "/%d", n), 27, 26, Cores.cinza_claro)
+  print_("VOLTA", 50, 8, Cores.cinza)
+  local decimos = (corrida.tempo * 10) // 1
+  print_(texto("tempo", decimos, "%d:%02d.%d", decimos // 600, decimos // 10 % 60, decimos % 10), 50, 35,
+    Cores.cinza_claro)
+  for i, c in ipairs(carros) do
+    local y = 51 + 10 * (i - 1)
+    local cor = c.destruido and Cores.cinza or (c == j and Cores.amarelo or Cores.cinza_claro)
+    print_(texto(CHAVE_ORDEM[i], c.nome, "%d %s", i, c.nome), 17, y, cor)
+    if c.destruido then print_("X", 92, y, Cores.vermelho) end
+  end
+  if j.dinheiro > 0 then print_(texto("dinheiro", j.dinheiro, "$%d", j.dinheiro), 64, 256, Cores.verde) end
+  if travadas then
+    local k = (C.ARMAS_INICIO - corrida.tempo + 0.999) // 1
+    print_(texto("armas", k, "ARMAS EM %d", k), 30, 241, Cores.cinza_claro)
+  end
+  print_("KM/H", 414, 230, Cores.cinza)
+  print_("TURBO", 436, 257, j.turbo and j.turbo_carga > 0 and Cores.azul_claro or Cores.cinza)
+
+  -- contagem, largada e chegada
+  if corrida.estado == "contagem" then
+    local k = corrida.contagem // 1 + 1
+    aviso(texto("contagem", k, "%d", k))
+  elseif corrida.tempo < 1 then
+    aviso("VAI!", Cores.verde)
+  elseif corrida.estado == "fim" then
+    if j.destruido then
+      aviso("DESTRU\xCDDO!", Cores.vermelho)
+    else
+      aviso(texto("chegada", j.posicao, "%d\xBA LUGAR!", j.posicao))
+    end
+  end
+end
+
+-- Painel com 2 jogadores (v0.41, tela dividida lado a lado: telas/corrida.lua): cada metade tem
+-- 240 px (208 visiveis, de 16 a 223), entao o painel e mais estreito que o da tela inteira:
+--   em cima a esquerda: posicao, volta e tempo; em cima a direita: o mapinha
+--   embaixo: vida, municao e turbo (as barras de LEDs, com o icone de cada uma), as minas e o
+--     km/h (sem a rampa do velocimetro, que nao cabe)
+-- Cada metade e desenhada com ui.camera(-ox, 0), que so desloca o desenho e nao entra na lista
+-- de desenho: cada parte sai para as duas metades antes da proxima, e cada folha (painel,
+-- mapinha, icones, barras, f3) e lida uma vez por quadro.
+local AVISO, BORDA = {}, {}
+local CHAVE_CHEGADA = { "chegada1", "chegada2" }
+
+function Hud.desenhar_dois(corrida, vistas)
+  local camera = ui.camera
+  local nv = #vistas
+  local ui_img = Sprites.img.ui
+  local barras, pn = ui_img.barras, ui_img.painel
+  local efx = Sprites.img.efx.e16
+  local carros = corrida.classificacao
+  local n = #corrida.carros
+  local m = corrida.mapa
+  local mx = m and 220 - m.w
+  local travadas = corrida.tempo <= C.ARMAS_INICIO
+
+  for k = 1, nv do
+    camera(-vistas[k].ox, 0)
+    painel(20, 4, 100, 41)                      -- posicao, volta e tempo
+    if m then painel(mx - 2, 4, m.w + 4, m.h + 4) end
+    painel(20, 219, 200, 49)                    -- vida, municao, turbo, minas e km/h
+  end
+  for k = 1, nv do
+    local j = vistas[k].carro
+    camera(-vistas[k].ox, 0)
+    tile(pn, P.f3 + j.posicao % 10, 25, 10)
+    tile(pn, P.ordinal, 41, 8)
+    local volta = j.volta < 1 and 1 or (j.volta > corrida.voltas and corrida.voltas or j.volta)
+    local x = numero(pn, volta, 66, 17)
+    tile(pn, P.barra, x, 17)
+    numero(pn, corrida.voltas, x + P.avanco, 17)
+    local vel = j.v > 0 and j.v or -j.v
+    numero_dir(pn, (vel * C.KMH) // 1, 192, 240)
+  end
+  if m then
     for k = 1, nv do
-      local v = vistas[k]
-      local j = v.carro
-      if not um then camera(0, -v.oy) end
+      camera(-vistas[k].ox, 0)
+      tile(m.img, m.espelho and 1024 or 0, mx, 6)
+    end
+  end
+  for k = 1, nv do
+    local j = vistas[k].carro
+    camera(-vistas[k].ox, 0)
+    tile(efx, Efx.conserto[1], 24, 221)
+    tile(efx, Efx.municao[1], 24, 236)
+    tile(efx, Efx.turbo[1], 24, 251)
+    for q = 1, j.minas do tile(efx, Efx.mina[1], 152 + (q - 1) * 16, 221) end
+  end
+  for k = 1, nv do
+    camera(-vistas[k].ox, 0)
+    tile(barras, B.vida, 44, 226)
+    if not travadas then tile(barras, B.municao, 44, 241) end
+    tile(barras, B.turbo, 44, 256)
+  end
+  for k = 1, nv do
+    local j = vistas[k].carro
+    camera(-vistas[k].ox, 0)
+    mascara(44, 226, j.vida / C.VIDA)
+    if not travadas then mascara(44, 241, j.municao / C.MUNICAO) end
+    mascara(44, 256, j.turbo_carga)
+  end
+  if m then
+    local esc = m.escala
+    for k = 1, nv do
+      local j = vistas[k].carro
+      camera(-vistas[k].ox, 0)
       for i = #carros, 1, -1 do
         local c = carros[i]
         if not c.destruido then
@@ -215,38 +284,22 @@ function Hud.desenhar(corrida, vistas)
       end
     end
   end
-
-  -- textos pequenos
   local decimos = (corrida.tempo * 10) // 1
   for k = 1, nv do
-    local v = vistas[k]
-    local j = v.carro
-    if not um then camera(0, -v.oy) end
-    local b = v.alto - 51
-    print_(texto("de", n, "/%d", n), 27, 26, Cores.cinza_claro)
-    print_("VOLTA", 50, 8, Cores.cinza)
-    print_(texto("tempo", decimos, "%d:%02d.%d", decimos // 600, decimos // 10 % 60, decimos % 10), 50, 35,
+    camera(-vistas[k].ox, 0)
+    print_(texto("de", n, "/%d", n), 43, 26, Cores.cinza_claro)
+    print_("VOLTA", 66, 8, Cores.cinza)
+    print_(texto("tempo", decimos, "%d:%02d.%d", decimos // 600, decimos // 10 % 60, decimos % 10), 66, 35,
       Cores.cinza_claro)
-    if um then
-      for i, c in ipairs(carros) do
-        local y = 51 + 10 * (i - 1)
-        local cor = c.destruido and Cores.cinza or (c == j and Cores.amarelo or Cores.cinza_claro)
-        print_(texto(CHAVE_ORDEM[i], c.nome, "%d %s", i, c.nome), 17, y, cor)
-        if c.destruido then print_("X", 92, y, Cores.vermelho) end
-      end
-    end
-    if j.dinheiro > 0 then print_(texto(CHAVE_DINHEIRO[k], j.dinheiro, "$%d", j.dinheiro), 64, b + 37, Cores.verde) end
     if travadas then
       local q = (C.ARMAS_INICIO - corrida.tempo + 0.999) // 1
-      print_(texto("armas", q, "ARMAS EM %d", q), 30, b + 22, Cores.cinza_claro)
+      print_(texto("armas", q, "ARMAS EM %d", q), 48, 241, Cores.cinza_claro)
     end
-    print_("KM/H", 414, b + 11, Cores.cinza)
-    print_("TURBO", 436, b + 38, j.turbo and j.turbo_carga > 0 and Cores.azul_claro or Cores.cinza)
+    print_("KM/H", 195, 248, Cores.cinza)
   end
 
-  -- contagem, largada e chegada (com 2 jogadores, quem ja chegou ou foi destruido ve o aviso
-  -- enquanto o outro termina)
-  local y = um and 52 or 4      -- 2 jogadores: no alto da visao (no meio, cobriria o seu carro)
+  -- contagem, largada e chegada, no meio da metade, um pouco acima do carro (quem ja chegou ou
+  -- foi destruido ve o aviso enquanto o outro termina); os paineis das duas e depois as letras
   for k = 1, nv do
     local j = vistas[k].carro
     local s, borda = false, nil
@@ -255,28 +308,29 @@ function Hud.desenhar(corrida, vistas)
       s = texto("contagem", q, "%d", q)
     elseif corrida.tempo < 1 then
       s, borda = "VAI!", Cores.verde
-    elseif corrida.estado == "fim" or not um then
-      if j.destruido then
-        s, borda = "DESTRU\xCDDO!", Cores.vermelho
-      elseif j.chegou then
-        s = texto(CHAVE_CHEGADA[k], j.posicao, "%d\xBA LUGAR!", j.posicao)
-      end
+    elseif j.destruido then
+      s, borda = "DESTRU\xCDDO!", Cores.vermelho
+    elseif j.chegou then
+      s = texto(CHAVE_CHEGADA[k], j.posicao, "%d\xBA LUGAR!", j.posicao)
     end
     AVISO[k], BORDA[k] = s, borda
   end
   for k = 1, nv do
-    if AVISO[k] then
-      if not um then camera(0, -vistas[k].oy) end
-      aviso_painel(AVISO[k], BORDA[k], y)
+    local s = AVISO[k]
+    if s then
+      camera(-vistas[k].ox, 0)
+      local w = Texto.largura("f3", s)
+      painel(120 - w // 2 - 10, 72, w + 20, 33, BORDA[k] or Cores.amarelo_escuro)
     end
   end
   for k = 1, nv do
-    if AVISO[k] then
-      if not um then camera(0, -vistas[k].oy) end
-      aviso_texto(AVISO[k], y)
+    local s = AVISO[k]
+    if s then
+      camera(-vistas[k].ox, 0)
+      Texto.escrever("f3", s, 120 - Texto.largura("f3", s) // 2, 77, "amarelo")
     end
   end
-  if not um then camera() end
+  camera()
 end
 
 return Hud

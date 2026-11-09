@@ -30,51 +30,70 @@ local function preparar(p)
   p.regioes_prontas = true
 end
 
-local function tiras(p, camx, camy, alto)
+-- vistas: { { cx, cy, xa, xb }, ... }: cada visao desenha o ponto (x, y) do mundo em (x - cx,
+-- y - cy) da tela, e so as colunas inteiras entre xa e xb da tela. Com 2 jogadores (v0.41, tela
+-- dividida lado a lado), cada regiao sai para as duas visoes antes da proxima: uma folha que
+-- aparece nas duas e lida do cartao uma vez so.
+local function tiras(p, vistas, nv)
   if not p.regioes_prontas then preparar(p) end
   local tile = ui.tile
   local TH, RW, RT = p.tira, p.regiao_w, p.regiao_tiras
-  -- colunas inteiras: a primeira comeca em x >= 0, a ultima termina em x <= 480
-  local c0, c1 = -(-camx // TS), (camx + TELA_W) // TS - 1
-  local r0, r1 = camy // TH, (camy + alto - 1) // TH
-  if c0 < 0 then c0 = 0 end
-  if r0 < 0 then r0 = 0 end
-  if c1 >= p.colunas then c1 = p.colunas - 1 end
-  if r1 >= p.linhas then r1 = p.linhas - 1 end
-  local regioes = p.regioes
-  local espelho = p.espelho
-  if espelho then
-    local C = p.colunas
-    c0, c1 = C - 1 - c1, C - 1 - c0       -- colunas da imagem que aparecem na tela
+  local espelho, C = p.espelho, p.colunas
+  -- colunas e linhas de tiras de cada visao e as regioes que alguma delas toca
+  local ry0, ry1, rx0, rx1 = p.linhas, -1, C, -1
+  for k = 1, nv do
+    local v = vistas[k]
+    -- colunas inteiras: a primeira comeca em x >= xa, a ultima termina em x <= xb
+    local c0, c1 = -(-(v.cx + v.xa) // TS), (v.cx + v.xb) // TS - 1
+    local r0, r1 = v.cy // TH, (v.cy + TELA_H - 1) // TH
+    if c0 < 0 then c0 = 0 end
+    if r0 < 0 then r0 = 0 end
+    if c1 >= C then c1 = C - 1 end
+    if r1 >= p.linhas then r1 = p.linhas - 1 end
+    if espelho then c0, c1 = C - 1 - c1, C - 1 - c0 end   -- colunas da imagem que aparecem
+    v.c0, v.c1, v.r0, v.r1 = c0, c1, r0, r1
+    if c0 <= c1 and r0 <= r1 then
+      if r0 // RT < ry0 then ry0 = r0 // RT end
+      if r1 // RT > ry1 then ry1 = r1 // RT end
+      if c0 // RW < rx0 then rx0 = c0 // RW end
+      if c1 // RW > rx1 then rx1 = c1 // RW end
+    end
   end
-  for ry = r0 // RT, r1 // RT do
+  local regioes = p.regioes
+  for ry = ry0, ry1 do
     local linha = regioes[ry + 1]
-    local ta, tb = ry * RT, ry * RT + RT - 1        -- linhas de tiras desta regiao na tela
-    if ta < r0 then ta = r0 end
-    if tb > r1 then tb = r1 end
-    for rx = c0 // RW, c1 // RW do
+    for rx = rx0, rx1 do
       local r = linha[rx + 1]
       local img = r.img
       local base = rx * RW
-      local ca, cb = base, base + RW - 1
-      if ca < c0 then ca = c0 end
-      if cb > c1 then cb = c1 end
-      if espelho then
-        local xa = (p.colunas - 1 - ca) * TS - camx
-        for t = ta, tb do
-          local nums, x, y = r[t - ry * RT + 2], xa, t * TH - camy
-          for k = ca - base + 1, cb - base + 1 do
-            tile(img, nums[k] + 1024, x, y)
-            x = x - TS
-          end
-        end
-      else
-        local xa = ca * TS - camx
-        for t = ta, tb do
-          local nums, x, y = r[t - ry * RT + 2], xa, t * TH - camy
-          for k = ca - base + 1, cb - base + 1 do
-            tile(img, nums[k], x, y)
-            x = x + TS
+      for k = 1, nv do
+        local v = vistas[k]
+        local ta, tb = ry * RT, ry * RT + RT - 1      -- linhas de tiras desta regiao na visao
+        if ta < v.r0 then ta = v.r0 end
+        if tb > v.r1 then tb = v.r1 end
+        local ca, cb = base, base + RW - 1
+        if ca < v.c0 then ca = v.c0 end
+        if cb > v.c1 then cb = v.c1 end
+        if ta <= tb and ca <= cb then
+          local cx, cy = v.cx, v.cy
+          if espelho then
+            local xa = (C - 1 - ca) * TS - cx
+            for t = ta, tb do
+              local nums, x, y = r[t - ry * RT + 2], xa, t * TH - cy
+              for q = ca - base + 1, cb - base + 1 do
+                tile(img, nums[q] + 1024, x, y)
+                x = x - TS
+              end
+            end
+          else
+            local xa = ca * TS - cx
+            for t = ta, tb do
+              local nums, x, y = r[t - ry * RT + 2], xa, t * TH - cy
+              for q = ca - base + 1, cb - base + 1 do
+                tile(img, nums[q], x, y)
+                x = x + TS
+              end
+            end
           end
         end
       end
@@ -82,15 +101,11 @@ local function tiras(p, camx, camy, alto)
   end
 end
 
--- camx, camy: canto de cima a esquerda da tela no mundo (inteiros); alto: altura da visao (270 =
--- a tela inteira; 2 jogadores: meia tela, so as linhas de tiras que aparecem nela)
-function Fundo.desenhar(p, camx, camy, alto)
-  alto = alto or TELA_H
-  if p.tira then return tiras(p, camx, camy, alto) end
-  -- tiles de 16x16 (pista de treino), regioes de p.regiao_w x p.regiao_h tiles
+-- tiles de 16x16 (pista de treino), regioes de p.regiao_w x p.regiao_h tiles, uma visao
+local function mapa(p, camx, camy, xa, xb)
   local tile, imagens = ui.tile, p.imagens
-  local c0, c1 = -(-camx // TS), (camx + TELA_W) // TS - 1
-  local r0, r1 = camy // TS, (camy + alto - 1) // TS
+  local c0, c1 = -(-(camx + xa) // TS), (camx + xb) // TS - 1
+  local r0, r1 = camy // TS, (camy + TELA_H - 1) // TS
   if c0 < 0 then c0 = 0 end
   if r0 < 0 then r0 = 0 end
   if c1 >= p.colunas then c1 = p.colunas - 1 end
@@ -123,6 +138,21 @@ function Fundo.desenhar(p, camx, camy, alto)
     end
     ry = ry + RH
   end
+end
+
+-- camx, camy: canto de cima a esquerda da tela no mundo (inteiros)
+local UMA = { { xa = 0, xb = TELA_W } }
+function Fundo.desenhar(p, camx, camy)
+  if not p.tira then return mapa(p, camx, camy, 0, TELA_W) end
+  local v = UMA[1]
+  v.cx, v.cy = camx, camy
+  tiras(p, UMA, 1)
+end
+
+-- varias visoes (2 jogadores): { { cx, cy, xa, xb }, ... } como em tiras
+function Fundo.desenhar_vistas(p, vistas)
+  if p.tira then return tiras(p, vistas, #vistas) end
+  for _, v in ipairs(vistas) do mapa(p, v.cx, v.cy, v.xa, v.xb) end
 end
 
 return Fundo

@@ -48,7 +48,9 @@ function D.quadro()
   if D.ligado then
     local cpu = D.stat(1)
     local t = Jogo.tela
-    local pista = t and t.corrida and t.corrida.pista.id or "-"
+    local r = t and t.corrida
+    local pista = r and r.pista.id or "-"
+    if r and r.jogadores and #r.jogadores > 1 then pista = pista .. " jogadores=" .. #r.jogadores .. " carros=" .. #r.carros end
     print(string.format("RROCK FPS %s cpu=%s tela=%s pista=%s mem=%dKB quadro=%d passo=%.2f (%s) dframe=%s",
       fps and string.format("%.0f", fps) or "?", cpu and string.format("%.0f", cpu) or "?", Jogo.nome_tela or "?",
       pista, collectgarbage("count") // 1, D.quadros, Tempo.passo, Tempo.fonte,
