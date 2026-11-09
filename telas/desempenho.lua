@@ -18,7 +18,8 @@
 --            a folha da fonte lida 1 vez ou 24 vezes no quadro
 --   PISTA    quanto custa ler folhas do cartao: cada folha desenhada no quadro e lida inteira
 --   CORRIDA  o gramado (a pista mais pesada no aparelho) com uma parte desligada de cada vez
---            (Tela.sem de telas/corrida.lua), so as contas, so o desenho, e as outras pistas
+--            (Tela.sem de telas/corrida.lua), so as contas, so o desenho, com 2 jogadores (tela
+--            dividida, v0.40: com 2 rivais e sem rivais), e as outras pistas
 -- B: repete os testes. A: volta para as opcoes.
 local C = require "config"
 local Cores = require "cores"
@@ -88,7 +89,8 @@ local function corrida(self)
   if op.so ~= "contas" then self.cv:desenhar() end
 end
 
--- { nome (ate 36 letras), desenho, opcoes: corrida = pista, sem = partes, so = "contas"/"desenho" }
+-- { nome (ate 36 letras), desenho, opcoes: corrida = pista, sem = partes, so = "contas"/"desenho",
+--   jogadores, carros (Corrida.nova) }
 local TESTES = {
   { "VAZIO (SO A PALETA)", fundo },
   { "LUA: 20 MIL INSTRUCOES", lua(20) },
@@ -114,6 +116,8 @@ local TESTES = {
   { "GRAMADO: SEM RASTROS, TIROS E ITENS", corrida, { corrida = GRAMADO, sem = { efeitos = true } } },
   { "GRAMADO: SO O DESENHO (PARADA)", corrida, { corrida = GRAMADO, so = "desenho" } },
   { "GRAMADO: SO AS CONTAS (SEM DESENHO)", corrida, { corrida = GRAMADO, so = "contas" } },
+  { "GRAMADO: 2 JOGADORES, 4 CARROS", corrida, { corrida = GRAMADO, jogadores = 2 } },
+  { "GRAMADO: 2 JOGADORES, SEM RIVAIS", corrida, { corrida = GRAMADO, jogadores = 2, carros = 2 } },
 }
 for i = 3, Pista.quantas() do
   TESTES[#TESTES + 1] = { "CORRIDA: " .. Pista.LISTA[i].nome, corrida, { corrida = i } }
@@ -158,11 +162,12 @@ end
 
 -- corrida de 4 no piloto automatico, todos com minas, ja correndo (sem a contagem) e com as
 -- armas liberadas
-function Tela:nova_corrida(n)
-  self.cv = TelaCorrida.nova({ pista = n, voltas = 99, autopiloto = true, minas = 3, minas_rivais = 3 })
+function Tela:nova_corrida(op)
+  self.cv = TelaCorrida.nova({ pista = op.corrida, voltas = 99, autopiloto = true, minas = 3, minas_rivais = 3,
+                               jogadores = op.jogadores, carros = op.carros, autopiloto2 = true })
   local r = self.cv.corrida
   r.estado, r.tempo = "correndo", C.ARMAS_INICIO
-  self.cv_pista = n
+  self.cv_op = op
 end
 
 function Tela:comecar()
@@ -176,14 +181,15 @@ function Tela:comecar()
     return
   end
   if op.corrida then
-    if self.cv_pista ~= op.corrida then
+    local antes = self.cv_op
+    if not antes or antes.corrida ~= op.corrida or antes.jogadores ~= op.jogadores or antes.carros ~= op.carros then
       self.cv = nil
       collectgarbage("collect")
-      self:nova_corrida(op.corrida)
+      self:nova_corrida(op)
     end
     TelaCorrida.sem = op.sem or {}
   else
-    self.cv, self.cv_pista = nil, nil
+    self.cv, self.cv_op = nil, nil
   end
   self.titulo = string.format("TESTE %d DE %d: %s", self.atual, #TESTES, TESTES[self.atual][1])
   print("RROCK TESTE " .. self.atual .. " " .. TESTES[self.atual][1] .. " ...")
@@ -229,7 +235,7 @@ function Tela:atualizar()
   if cv and OPCOES[self.atual].so ~= "desenho" then
     cv:atualizar()
     -- o seu carro chegou ou foi destruido: outra corrida (a tela da corrida iria para o resultado)
-    if cv.corrida.estado == "fim" then self:nova_corrida(self.cv_pista) end
+    if cv.corrida.estado == "fim" then self:nova_corrida(self.cv_op) end
   end
   self.quadro = self.quadro + 1
   if self.quadro == AQUECE then
@@ -255,15 +261,15 @@ end
 function Tela:tabela()
   fundo()
   ui.print("TESTE DE DESEMPENHO v" .. C.VERSAO .. ": TIRE UMA FOTO DESTA TELA E MANDE", 8, 4, Cores.amarelo)
-  ui.print("TESTE", 8, 16, Cores.cinza)
-  ui.print("  FPS  PIOR", 300, 16, Cores.cinza)
+  ui.print("TESTE", 8, 15, Cores.cinza)
+  ui.print("  FPS  PIOR", 300, 15, Cores.cinza)
   for i, teste in ipairs(TESTES) do
     local r = self.resultados[i]
-    local y = 27 + (i - 1) * 9
+    local y = 25 + (i - 1) * 9
     ui.print(teste.rotulo, 8, y, Cores.branco)
     if r then ui.print(r.texto, 300, y, cor_do_fps(r.fps)) end
   end
-  ui.print(Entrada.NOME.confirmar .. ": REPETIR   " .. Entrada.NOME.voltar .. ": SAIR", 8, 258, Cores.cinza_claro)
+  ui.print(Entrada.NOME.confirmar .. ": REPETIR   " .. Entrada.NOME.voltar .. ": SAIR", 8, 261, Cores.cinza_claro)
 end
 
 function Tela:desenhar()

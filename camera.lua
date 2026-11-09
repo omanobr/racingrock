@@ -7,10 +7,14 @@ local C = require "config"
 local Camera = {}
 Camera.__index = Camera
 
-local TELA_W, TELA_H = 480, 270
+local TELA_W = 480
 
-function Camera.nova(pista, carro)
-  local cam = setmetatable({ pista = pista, alvo = carro, fx = 0, fy = 0, vfx = 0, vfy = 0 }, Camera)
+-- alto: altura da visao (270 = a tela inteira; 2 jogadores: meia tela, e o olhar para a frente
+-- na vertical diminui na mesma proporcao)
+function Camera.nova(pista, carro, alto)
+  alto = alto or 270
+  local cam = setmetatable({ pista = pista, alvo = carro, alto = alto, frente_y = C.CAM_FRENTE_Y * alto // 270,
+                             fx = 0, fy = 0, vfx = 0, vfy = 0 }, Camera)
   cam:atualizar(0)
   return cam
 end
@@ -26,11 +30,11 @@ local function mola(atual, alvo, vel, tempo, dt)
 end
 
 function Camera:atualizar(passo)
-  local c, p = self.alvo, self.pista
+  local c, p, alto, frente_y = self.alvo, self.pista, self.alto, self.frente_y
   local dt = passo / 60
   local tx, ty = c.vx * C.CAM_ANTECIPA, c.vy * C.CAM_ANTECIPA
   if tx > C.CAM_FRENTE_X then tx = C.CAM_FRENTE_X elseif tx < -C.CAM_FRENTE_X then tx = -C.CAM_FRENTE_X end
-  if ty > C.CAM_FRENTE_Y then ty = C.CAM_FRENTE_Y elseif ty < -C.CAM_FRENTE_Y then ty = -C.CAM_FRENTE_Y end
+  if ty > frente_y then ty = frente_y elseif ty < -frente_y then ty = -frente_y end
   if dt > 0 then
     self.fx, self.vfx = mola(self.fx, tx, self.vfx, C.CAM_SUAVE, dt)
     self.fy, self.vfy = mola(self.fy, ty, self.vfy, C.CAM_SUAVE, dt)
@@ -38,9 +42,9 @@ function Camera:atualizar(passo)
   -- a partir da posicao do carro ja arredondada (como ele e desenhado): assim o carro nao treme
   -- 1 px na tela quando a camera e ele arredondam diferente
   local x0 = c.x // 1 + (self.fx + 0.5) // 1 - TELA_W // 2
-  local y0 = c.y // 1 + (self.fy + 0.5) // 1 - TELA_H // 2
+  local y0 = c.y // 1 + (self.fy + 0.5) // 1 - alto // 2
   if x0 > p.largura - TELA_W then x0 = p.largura - TELA_W end
-  if y0 > p.altura - TELA_H then y0 = p.altura - TELA_H end
+  if y0 > p.altura - alto then y0 = p.altura - alto end
   if x0 < 0 then x0 = 0 end
   if y0 < 0 then y0 = 0 end
   self.x0, self.y0 = x0, y0

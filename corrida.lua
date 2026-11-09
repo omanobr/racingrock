@@ -32,7 +32,9 @@ end
 -- opcoes: { pista = n, variante = n (Pista.VARIANTES), voltas = n, autopiloto = bool, modelo = id do carro do jogador,
 --   nivel = 1..3 (C.NIVEIS: o computador), minas = do jogador, minas_rivais = de cada rival,
 --   e no modo historia (campeonato.lua): rivais = { { nome, modelo, fator, blindagem, minas }, ... },
---   melhorias = { motor, pneus, blindagem } do jogador, dificuldade = "facil"..., campeonato }
+--   melhorias = { motor, pneus, blindagem } do jogador, dificuldade = "facil"..., campeonato,
+--   jogadores = 1 ou 2 (o 2o e o carro 2, azul, com o mesmo modelo do 1o; autopiloto2: o computador
+--   pilota ele), carros = quantos na pista (4; com 2 jogadores pode ser 2, sem rivais) }
 -- As minas nao vem de fabrica (pedido do Felipe, como no Death Rally): so a metralhadora. No modo
 -- historia o jogador compra antes da corrida.
 function Corrida.nova(opcoes)
@@ -57,23 +59,27 @@ function Corrida.nova(opcoes)
   r.carros = {}
   r.chegada = {}       -- carros na ordem em que terminaram
   local p = r.pista
-  -- o jogador larga por ultimo (como no Death Rally)
-  local vagas = { 4, 1, 2, 3 }
+  -- o jogador larga por ultimo (como no Death Rally); o 2o jogador ao lado dele
+  local dois = (opcoes.jogadores or 1) >= 2
+  local vagas = dois and { 4, 3, 1, 2 } or { 4, 1, 2, 3 }
   local lista = modelos(opcoes.modelo or C.MODELO)
+  if dois then lista[2] = lista[1] end
   local rivais = opcoes.rivais
   if rivais then        -- modo historia: os rivais e os carros deles vem do ranking
     for i = 1, 3 do lista[i + 1] = Carros[Carros.indice(rivais[i].modelo)] end
   end
   local mel = opcoes.melhorias or {}
-  for i = 1, C.CARROS do
+  r.jogadores = {}
+  for i = 1, opcoes.carros or C.CARROS do
+    local humano = i == 1 or (dois and i == 2)
     local g = p.grade[vagas[i]]
     local m = lista[i]
     local rival = rivais and rivais[i - 1]
-    local fator = i == 1 and 1 + C.MELHORIA_MOTOR * (mel.motor or 0) or C.IA_FATOR_M[i - 1]
+    local fator = i == 1 and 1 + C.MELHORIA_MOTOR * (mel.motor or 0) or (humano and 1 or C.IA_FATOR_M[i - 1])
     if rival then fator = C.IA_FATOR_M[i - 1] * rival.fator end
     -- nivel do computador: a ficha inteira do carro dele x nivel.fator (a blindagem e a arma em
     -- combate.lua)
-    local nivel = i == 1 and 1 or r.nivel.fator
+    local nivel = humano and 1 or r.nivel.fator
     local ader = Carros.escala(m.aderencia, C.FICHA_ADERENCIA) / nivel
     if i == 1 then ader = math.max(0.1, ader - C.MELHORIA_PNEU * (mel.pneus or 0)) end
     local c = Carro.novo({
@@ -82,7 +88,8 @@ function Corrida.nova(opcoes)
       arranque = Carros.escala(m.aceleracao, C.FICHA_ARRANQUE) * nivel,
       aderencia = ader,
       tracao = m.tracao,
-      nome = i == 1 and "VOCE" or (rival and rival.nome or m.nome), humano = i == 1, modelo = m.id,
+      nome = humano and (dois and "JOGADOR " .. i or "VOCE") or (rival and rival.nome or m.nome), humano = humano,
+      modelo = m.id,
       img = Sprites.img.car[m.id .. "_" .. CORES[i]], img2 = Sprites.img.car[m.id .. "_" .. CORES[i] .. "2"],
     })
     c.modelo = m
@@ -97,12 +104,16 @@ function Corrida.nova(opcoes)
       c.minas_iniciais = rival and rival.minas or opcoes.minas_rivais or 0
       c.sabotado = rival and rival.sabotado
     end
+    if humano then
+      c.controle = i - 1          -- o controle de quem pilota (entrada.lua)
+      r.jogadores[i] = c
+    end
     c.idx = p:mais_perto(c.x, c.y)
     c.volta, c.meio = 0, true       -- 0 = ainda atras da linha de chegada
     c.progresso = c.idx - p.n
     c.posicao = i
     if not c.humano then IA.preparar(c, r.nivel); c.ia = true
-    elseif opcoes.autopiloto then IA.preparar(c); c.ia = true end
+    elseif opcoes.autopiloto or (i == 2 and opcoes.autopiloto2) then IA.preparar(c); c.ia = true end
     r.carros[i] = c
   end
   r.jogador = r.carros[1]
@@ -115,12 +126,13 @@ function Corrida.nova(opcoes)
 end
 
 local function comandos_do_jogador(c)
-  c.acel = Entrada.acelera(0)
-  c.freio = Entrada.freia(0)
-  c.turbo = Entrada.turbo(0)
-  c.volante = (Entrada.direita(0) and 1 or 0) - (Entrada.esquerda(0) and 1 or 0)
-  c.atirando = Entrada.atira(0)
-  c.soltar_mina = Entrada.mina(0)
+  local p = c.controle
+  c.acel = Entrada.acelera(p)
+  c.freio = Entrada.freia(p)
+  c.turbo = Entrada.turbo(p)
+  c.volante = (Entrada.direita(p) and 1 or 0) - (Entrada.esquerda(p) and 1 or 0)
+  c.atirando = Entrada.atira(p)
+  c.soltar_mina = Entrada.mina(p)
 end
 
 -- batidas entre carros: cada carro e 2 circulos (frente e tras, da largura do carro); no par de
@@ -257,12 +269,17 @@ end
 -- de um puma com o fusca sem melhorias). Agora na frente ele corre com o carro que tem.
 function Corrida:elastico()
   local E, j, longe = self.nivel.elastico, self.jogador, C.IA_ELASTICO_LONGE
-  for i = 2, #self.carros do
+  for _, h in ipairs(self.jogadores) do          -- 2 jogadores: o da frente
+    if h.progresso > j.progresso then j = h end
+  end
+  for i = 1, #self.carros do
     local c = self.carros[i]
-    local d = c.progresso - j.progresso
-    if d < -longe then c.elastico = E.atras_longe
-    elseif d < 0 then c.elastico = E.atras
-    else c.elastico = 1 end
+    if not c.humano then
+      local d = c.progresso - j.progresso
+      if d < -longe then c.elastico = E.atras_longe
+      elseif d < 0 then c.elastico = E.atras
+      else c.elastico = 1 end
+    end
   end
 end
 
@@ -309,7 +326,7 @@ function Corrida:atualizar(passo)
   if self.estado == "correndo" then
     local j = self.jogador
     -- so o jogador sobrou: vence na hora (e leva o bonus de sobrevivente, em premiar)
-    if not j.destruido and not j.chegou then
+    if #self.jogadores == 1 and not j.destruido and not j.chegou then
       local vivos = 0
       for _, c in ipairs(self.carros) do
         if not c.destruido and not c.chegou then vivos = vivos + 1 end
@@ -320,7 +337,12 @@ function Corrida:atualizar(passo)
         self.chegada[#self.chegada + 1] = j
       end
     end
-    if j.chegou or j.destruido then
+    -- acaba quando todos os jogadores chegaram ou foram destruidos
+    local acabou = true
+    for _, h in ipairs(self.jogadores) do
+      if not (h.chegou or h.destruido) then acabou = false end
+    end
+    if acabou then
       self.estado = "fim"
       self.fim_em = self.tempo
       self:classificar()

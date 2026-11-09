@@ -1,5 +1,7 @@
--- Corrida rapida: escolhe a pista, o carro, o nivel dos rivais e se todos levam minas, e corre
--- (sem campeonato). A direita, o mapinha da pista e o carro em 3/4 com a ficha.
+-- Corrida rapida: escolhe a pista, o carro, o nivel dos rivais, se todos levam minas e quantos
+-- jogadores, e corre (sem campeonato). A direita, o mapinha da pista e o carro em 3/4 com a ficha.
+-- JOGADORES (v0.40, teste da tela dividida): 1; 2 com 2 rivais; 2 sem rivais. Por enquanto o 2o
+-- jogador e o piloto automatico (o carro azul, com o mesmo modelo do seu).
 local C = require "config"
 local Entrada = require "entrada"
 local Cores = require "cores"
@@ -49,20 +51,29 @@ function Tela.mapa(id, cx, y, espelho)
 end
 
 local minas = false     -- todos levam um pacote de minas?
+local JOGADORES = {
+  { "1 JOGADOR", jogadores = 1, carros = 4 },
+  { "2 JOGADORES (2o AUTOMATICO)", jogadores = 2, carros = 4 },
+  { "2 JOGADORES, SEM RIVAIS", jogadores = 2, carros = 2 },
+}
+local jogadores = 1     -- em JOGADORES
 
 local menu = Menu.novo({
   { texto = "CORRER", acao = function()
     local n = minas and C.MINAS or 0
+    local jg = JOGADORES[jogadores]
     Jogo.ir("corrida", { pista = C.PISTA, variante = C.VARIANTE, voltas = Pista.LISTA[C.PISTA].voltas,
-                         nivel = C.NIVEL, minas = n, minas_rivais = n })
+                         nivel = C.NIVEL, minas = n, minas_rivais = n,
+                         jogadores = jg.jogadores, carros = jg.carros, autopiloto2 = true })
   end },
   { texto = "PISTA", acao = function() C.PISTA = C.PISTA % Pista.quantas() + 1 end },
   { texto = "VARIA\xC7\xC3O", acao = function() C.VARIANTE = C.VARIANTE % #Pista.VARIANTES + 1 end },
   { texto = "CARRO", acao = function() C.MODELO = Carros[Carros.indice(C.MODELO) % #Carros + 1].id end },
   { texto = "N\xCDVEL", acao = function() C.NIVEL = C.NIVEL % #C.NIVEIS + 1 end },
   { texto = "MINAS", acao = function() minas = not minas end },
+  { texto = "JOGADORES", acao = function() jogadores = jogadores % #JOGADORES + 1 end },
   { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end },
-}, 52, 48, 22, 150)
+}, 52, 44, 20, 150)
 
 function Tela.nova()
   return setmetatable({}, Tela)
@@ -93,11 +104,14 @@ function Tela:desenhar()
   Texto.escrever("f2", m.nome, 204, 152, "amarelo")
   Tela.ficha_barras(m, 204, 174)
   Tela.carro(m, 400, 228)
-  -- nivel e minas
-  Menu.painel(16, 206, 172, 38)
-  ui.print("RIVAIS: " .. C.NIVEIS[C.NIVEL].id:upper(), 24, 212, Cores.branco)
+  -- nivel, minas e jogadores
+  local jg = JOGADORES[jogadores]
+  Menu.painel(16, 206, 172, 50)
+  ui.print(jg.carros > jg.jogadores and "RIVAIS: " .. C.NIVEIS[C.NIVEL].id:upper() or "RIVAIS: NENHUM", 24, 212,
+    Cores.branco)
   ui.print(minas and "MINAS: 3 PARA CADA UM" or "MINAS: NAO (SO METRALHADORA)", 24, 226,
     minas and Cores.verde or Cores.cinza_claro)
+  ui.print(jg[1], 24, 240, jg.jogadores > 1 and Cores.amarelo or Cores.cinza_claro)
   Menu.rodape(Entrada.NOME.confirmar .. ": ESCOLHER/TROCAR   " .. Entrada.NOME.voltar .. ": VOLTAR")
 end
 

@@ -30,13 +30,13 @@ local function preparar(p)
   p.regioes_prontas = true
 end
 
-local function tiras(p, camx, camy)
+local function tiras(p, camx, camy, alto)
   if not p.regioes_prontas then preparar(p) end
   local tile = ui.tile
   local TH, RW, RT = p.tira, p.regiao_w, p.regiao_tiras
   -- colunas inteiras: a primeira comeca em x >= 0, a ultima termina em x <= 480
   local c0, c1 = -(-camx // TS), (camx + TELA_W) // TS - 1
-  local r0, r1 = camy // TH, (camy + TELA_H - 1) // TH
+  local r0, r1 = camy // TH, (camy + alto - 1) // TH
   if c0 < 0 then c0 = 0 end
   if r0 < 0 then r0 = 0 end
   if c1 >= p.colunas then c1 = p.colunas - 1 end
@@ -82,13 +82,15 @@ local function tiras(p, camx, camy)
   end
 end
 
--- camx, camy: canto de cima a esquerda da tela no mundo (inteiros)
-function Fundo.desenhar(p, camx, camy)
-  if p.tira then return tiras(p, camx, camy) end
+-- camx, camy: canto de cima a esquerda da tela no mundo (inteiros); alto: altura da visao (270 =
+-- a tela inteira; 2 jogadores: meia tela, so as linhas de tiras que aparecem nela)
+function Fundo.desenhar(p, camx, camy, alto)
+  alto = alto or TELA_H
+  if p.tira then return tiras(p, camx, camy, alto) end
   -- tiles de 16x16 (pista de treino), regioes de p.regiao_w x p.regiao_h tiles
   local tile, imagens = ui.tile, p.imagens
   local c0, c1 = -(-camx // TS), (camx + TELA_W) // TS - 1
-  local r0, r1 = camy // TS, (camy + TELA_H - 1) // TS
+  local r0, r1 = camy // TS, (camy + alto - 1) // TS
   if c0 < 0 then c0 = 0 end
   if r0 < 0 then r0 = 0 end
   if c1 >= p.colunas then c1 = p.colunas - 1 end

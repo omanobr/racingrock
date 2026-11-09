@@ -59,7 +59,8 @@ end
 
 if DEV.cena == "corrida" then
   Jogo.ir("corrida", { pista = DEV.pista or 1, variante = DEV.variante, voltas = DEV.voltas or C.VOLTAS,
-                       autopiloto = DEV.autopiloto, modelo = DEV.modelo })
+                       autopiloto = DEV.autopiloto, modelo = DEV.modelo, jogadores = DEV.jogadores,
+                       carros = DEV.carros, autopiloto2 = true })
 elseif DEV.cena == "desempenho" then
   Jogo.ir("desempenho")
 else
