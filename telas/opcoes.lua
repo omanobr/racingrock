@@ -1,4 +1,4 @@
--- Opcoes: FPS no rodape e teste de botoes.
+-- Opcoes: FPS no rodape, teste de botoes e teste de desempenho.
 local Entrada = require "entrada"
 local Cores = require "cores"
 local Menu = require "menu"
@@ -10,8 +10,9 @@ local menu = Menu.novo({
   { texto = "FPS NO RODAP\xC9", acao = function() Jogo.rodape = not Jogo.rodape end,
     valor = function() return Jogo.rodape and "SIM" or "N\xC3O" end },
   { texto = "TESTE DE BOT\xD5ES", acao = function() Jogo.ir("teste") end },
+  { texto = "TESTE DE DESEMPENHO", acao = function() Jogo.ir("desempenho") end },
   { texto = "VOLTAR", acao = function() Jogo.ir("titulo") end },
-}, 150, 100, 24, 230)
+}, 130, 100, 24, 270)
 
 function Tela.nova()
   return setmetatable({}, Tela)

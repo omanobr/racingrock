@@ -28,6 +28,7 @@ local TELAS = {
   abertura = require "telas.abertura",
   rodada = require "telas.rodada",
   cobranca = require "telas.cobranca",
+  desempenho = require "telas.desempenho",
 }
 
 Jogo = { tela = nil }
@@ -59,6 +60,8 @@ end
 if DEV.cena == "corrida" then
   Jogo.ir("corrida", { pista = DEV.pista or 1, variante = DEV.variante, voltas = DEV.voltas or C.VOLTAS,
                        autopiloto = DEV.autopiloto, modelo = DEV.modelo })
+elseif DEV.cena == "desempenho" then
+  Jogo.ir("desempenho")
 else
   Jogo.ir(DEV.sem_abertura and "titulo" or "abertura")
 end
@@ -96,8 +99,8 @@ function update(frame)
     for _ = 1, DEV.turbo or 1 do Jogo.tela:atualizar() end
   end
   -- fora da corrida, os tiles de cada folha saem juntos no fim (lote.lua: cada troca de folha
-  -- le a folha inteira do cartao)
-  local lote = Jogo.nome_tela ~= "corrida"
+  -- le a folha inteira do cartao); o teste de desempenho desenha como a corrida
+  local lote = Jogo.nome_tela ~= "corrida" and Jogo.nome_tela ~= "desempenho"
   Lote.ligar(lote)
   Jogo.tela:desenhar()
   if lote then

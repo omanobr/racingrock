@@ -15,6 +15,10 @@ Tela.__index = Tela
 
 local TELA_W = 480
 
+-- partes do desenho desligadas pelo teste de desempenho (telas/desempenho.lua): pista, efeitos
+-- (rastros, minas, itens, tiros), carros, painel
+Tela.sem = {}
+
 -- opcoes: { pista, voltas, autopiloto }
 function Tela.nova(opcoes)
   local t = setmetatable({}, Tela)
@@ -50,17 +54,11 @@ function Tela:atualizar()
   end
 end
 
-function Tela:desenhar()
-  local r, cam = self.corrida, self.camera
-  local x0, y0 = cam.x0, cam.y0
-  Fundo.desenhar(r.pista, x0, y0)
-  self.rastros:desenhar(x0, y0)
-  r.combate:desenhar_chao(x0, y0, r.quadros)
-
-  -- sombras (todas da mesma folha: uma carga so) e depois os carros (cada modelo tem 2 folhas:
-  -- as direcoes estao divididas entre elas). Carro (com a sombra, 3 px para a direita) que nao
-  -- cabe inteiro na largura da tela nao e desenhado: o console desenha errado o que fica
-  -- cortado pela borda; a faixa preta esconde.
+-- sombras (todas da mesma folha: uma carga so) e depois os carros (cada modelo tem 2 folhas:
+-- as direcoes estao divididas entre elas). Carro (com a sombra, 3 px para a direita) que nao
+-- cabe inteiro na largura da tela nao e desenhado: o console desenha errado o que fica
+-- cortado pela borda; a faixa preta esconde.
+local function desenhar_carros(self, r, x0, y0)
   local tile, carros, folha, tiles = ui.tile, r.carros, self.folha, self.tiles
   local meio, desloca, sombra = Carro.MEIO_QUADRO, Carro.SOMBRA_DESLOCA, self.sombra
   local limite = TELA_W - 2 * meio - 3
@@ -82,15 +80,25 @@ function Tela:desenhar()
       tile(f == 1 and c.img or c.img2, tiles[i], (c.x - x0) // 1 - meio, (c.y - y0) // 1 - meio)
     end
   end
+end
 
-  r.combate:desenhar_cima(x0, y0, r.quadros, Cores.amarelo)
+function Tela:desenhar()
+  local r, cam, sem = self.corrida, self.camera, Tela.sem
+  local x0, y0 = cam.x0, cam.y0
+  if not sem.pista then Fundo.desenhar(r.pista, x0, y0) end
+  if not sem.efeitos then
+    self.rastros:desenhar(x0, y0)
+    r.combate:desenhar_chao(x0, y0, r.quadros)
+  end
+  if not sem.carros then desenhar_carros(self, r, x0, y0) end
+  if not sem.efeitos then r.combate:desenhar_cima(x0, y0, r.quadros, Cores.amarelo) end
 
   -- faixas pretas nos lados: cobrem o vao das colunas de tiles que nao cabem inteiras
   local m = Fundo.MARGEM
   ui.rectfill(0, 0, m - 1, 269, Cores.preto)
   ui.rectfill(TELA_W - m, 0, TELA_W - 1, 269, Cores.preto)
 
-  Hud.desenhar(r)
+  if not sem.painel then Hud.desenhar(r) end
   if self.demo and (r.quadros // 30) % 2 == 0 then
     local s = "DEMONSTRAÇÃO - APERTE START"
     local w = Texto.largura("f2", s)
