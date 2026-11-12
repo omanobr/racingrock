@@ -2,7 +2,7 @@
 -- segundo, velocidade em pixels por quadro) estao convertidos para pixels por segundo.
 local C = {}
 
-C.VERSAO = "0.42"
+C.VERSAO = "0.43"
 
 C.VOLTAS = 3            -- so para testes: cada pista tem as suas (pistas/lista.lua)
 C.CARROS = 4

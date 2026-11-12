@@ -12,11 +12,15 @@
 -- contador de quadros do update(frame) nao conta os quadros pulados (dframe sempre 1).
 --
 -- O que cada grupo quer descobrir:
---   LUA      quantas instrucoes o console faz por quadro (40 e 60 mil) (o firmware 0.6.8 deixou o GearX ~2x
+--   LUA      se o console faz 60 mil instrucoes por quadro (o firmware 0.6.8 deixou o GearX ~2x
 --            mais rapido); o testar_console.py conta as instrucoes de cada teste no PC
 --   LETRAS   quanto custa quebrar o lote (v0.34): as mesmas 288 letras e 24 quadradinhos, com
 --            a folha da fonte lida 1 vez ou 24 vezes no quadro
---   PISTA    quanto custa ler folhas do cartao: cada folha desenhada no quadro e lida inteira
+--   PISTA    quanto custa ler folhas do cartao: cada folha desenhada no quadro e lida inteira.
+--            ESPELHADA (v0.43): a mesma tela com o tile espelhado (+1024). O desenvolvedor
+--            (12/11/2026): imagem 100% opaca sem espelho e copiada linha a linha (memcpy), muito
+--            mais rapido; espelhada ou com pixel transparente, pixel a pixel. Mesmas leituras e
+--            mesmos pixels: so muda o caminho (as pistas espelhadas da corrida sao assim)
 --   CORRIDA  o gramado (a pista mais pesada no aparelho) com uma parte desligada de cada vez
 --            (Tela.sem de telas/corrida.lua), so as contas, so o desenho, com 2 jogadores (tela
 --            dividida, v0.40: com 2 rivais e sem rivais), e as outras pistas
@@ -76,14 +80,15 @@ end
 
 -- a tela cheia de tiras do gramado (30 colunas de 16 x 63 px) em n faixas, cada faixa de uma
 -- folha diferente (os tiles de cada folha saem das regioes da pista: todos existem)
-local function folhas(n)
+local function folhas(n, espelho)
+  local vira = espelho and 1024 or 0
   return function(self)
     local tile, lista = ui.tile, self.folhas
     for k = 1, n do
       local f = lista[k]
       local img, t = f.img, f.tiles
       for c = (k - 1) * 30 // n, k * 30 // n - 1 do
-        for r = 0, 4 do tile(img, t[(r * 7 + c) % #t + 1], c * 16, r * 63) end
+        for r = 0, 4 do tile(img, t[(r * 7 + c) % #t + 1] + vira, c * 16, r * 63) end
       end
     end
   end
@@ -99,21 +104,21 @@ end
 --   jogadores, carros (Corrida.nova) }
 local TESTES = {
   { "VAZIO (SO A PALETA)", fundo },
-  { "LUA: 40 MIL INSTRUCOES", lua(40) },
   { "LUA: 60 MIL INSTRUCOES", lua(60) },
   { "LETRAS: NUM LOTE (1 LEITURA)", letras(false) },
   { "LETRAS: LOTE QUEBRADO (24 LEITURAS)", letras(true) },
   { "PISTA: 1 FOLHA", folhas(1) },
+  { "PISTA: 1 FOLHA ESPELHADA", folhas(1, true) },
   { "PISTA: 8 FOLHAS", folhas(8) },
   { "PISTA: 16 FOLHAS", folhas(16) },
   { "PISTA: 24 FOLHAS", folhas(24) },
+  { "PISTA: 24 FOLHAS ESPELHADAS", folhas(24, true) },
   { "GRAMADO: CORRIDA COMPLETA", corrida, { corrida = GRAMADO } },
   { "GRAMADO: SEM O PAINEL", corrida, { corrida = GRAMADO, sem = { painel = true } } },
   { "GRAMADO: SEM A PISTA", corrida, { corrida = GRAMADO, sem = { pista = true } } },
   { "GRAMADO: SEM OS CARROS", corrida, { corrida = GRAMADO, sem = { carros = true } } },
   { "GRAMADO: SEM RASTROS, TIROS E ITENS", corrida, { corrida = GRAMADO, sem = { efeitos = true } } },
   { "GRAMADO: SO O DESENHO (PARADA)", corrida, { corrida = GRAMADO, so = "desenho" } },
-  { "GRAMADO: SO AS CONTAS (SEM DESENHO)", corrida, { corrida = GRAMADO, so = "contas" } },
   { "GRAMADO 2 JOG.: 4 CARROS", corrida, { corrida = GRAMADO, jogadores = 2 } },
   { "GRAMADO 2 JOG.: 4 CARROS, SEM PAINEL", corrida, { corrida = GRAMADO, jogadores = 2, sem = { painel = true } } },
   { "GRAMADO 2 JOG.: 4 CARROS, SEM A PISTA", corrida, { corrida = GRAMADO, jogadores = 2, sem = { pista = true } } },
